@@ -64,12 +64,24 @@
     await auth.authStateReady();
     // signed out here while Firebase couldn't be reached: finish the job now
     if (ls.get(OUT_KEY)) { try { await U.signOut(auth); } catch (e) {} ls.del(OUT_KEY); }
-    return {U, F, auth, store};
+    const f = {U, F, auth, store};
+    /* The account can change somewhere else: a new email confirmed from its link, the account deleted on another
+       device. Firebase is asked once for the account as it is now (which also signs this browser out when the
+       account is gone or its sign-in has been withdrawn), and any change of who's signed in is followed. */
+    if (auth.currentUser) U.reload(auth.currentUser).then(() => agree(f), () => {});
+    U.onAuthStateChanged(auth, () => { if (!acting) agree(f); });
+    return f;
   })().catch(e => { fb = null; throw e; }));
   // Firebase and this browser's note agree on who's here; if not, the note is put right and the page starts over
+  let acting = false;   // signing in, out or deleting: this script is changing who's here itself
   const agree = f => {
     const u = f.auth.currentUser;
-    if ((u ? u.uid : null) === (me ? me.uid : null)) return true;
+    if ((u ? u.uid : null) === (me ? me.uid : null)) {
+      // the same person under a new email: the note and what the page shows next follow, nothing restarts
+      if (u && (u.email || "") !== (me.email || "")) { me.email = u.email || ""; remember(u); }
+      return true;
+    }
+    if (acting) return false;
     // (at most once every few seconds, so a browser that can't keep the note never reloads in a loop)
     let last = 0; try { last = +sessionStorage.getItem("pulse-account-restart") || 0; } catch (e) {}
     if (Date.now() - last < 5000) return false;
@@ -107,7 +119,9 @@
     return {code: c === "permission-denied" || c === "unauthenticated" ? "invalid_argument" : c ? c.replace(/-/g, "_") : "unavailable", message: String(e && e.message || e)};
   };
   const within = (p, ms = 20000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no({code: "unavailable", message: "no answer from the account service"}), ms))]);
+  let leaving = false;   // the account is being deleted: nothing more is read from it or written to it
   const run = async fn => {
+    if (leaving) throw {code: "unavailable", message: "the account is being deleted"};
     let f; try { f = await within(ready()); } catch (e) { throw fbErr(e); }
     try { return await within(fn(f)); } catch (e) { throw fbErr(e); }
   };
@@ -126,10 +140,10 @@
     set: body => run(f => f.F.setDoc(f.F.doc(f.store, real(path)), clean(body))),
     update: body => run(f => f.F.setDoc(f.F.doc(f.store, real(path)), clean(body), {merge: true})),
     delete: () => run(f => f.F.deleteDoc(f.F.doc(f.store, real(path)))),
-    onSnapshot: (next, err) => listen(f => f.F.onSnapshot(f.F.doc(f.store, real(path)), LIVE, s => { if (!s.metadata.fromCache) next(snapOf(s)); }, e => err && err(fbErr(e)))),
+    onSnapshot: (next, err) => listen(f => f.F.onSnapshot(f.F.doc(f.store, real(path)), LIVE, s => { if (!s.metadata.fromCache && !leaving) next(snapOf(s)); }, e => err && err(fbErr(e)))),
     collection: name => col(path + "/" + name)});
   const col = path => ({path, doc: id => doc(path + "/" + id),
-    onSnapshot: (next, err) => listen(f => f.F.onSnapshot(f.F.collection(f.store, real(path)), LIVE, q => { if (!q.metadata.fromCache) next({docs: q.docs.map(snapOf), size: q.size, empty: q.empty, metadata: q.metadata}); }, e => err && err(fbErr(e))))});
+    onSnapshot: (next, err) => listen(f => f.F.onSnapshot(f.F.collection(f.store, real(path)), LIVE, q => { if (!q.metadata.fromCache && !leaving) next({docs: q.docs.map(snapOf), size: q.size, empty: q.empty, metadata: q.metadata}); }, e => err && err(fbErr(e))))});
   window.claude = {use: async name =>
     name === "user" ? {id: async () => me ? me.uid : null}
     : name === "db" ? (me ? {doc, collection: col} : null)
@@ -155,10 +169,56 @@
   }
   function enter(user, isNew) { moveIn(user.uid, isNew); ls.del(OUT_KEY); remember(user); location.reload(); }
   async function signOut() {
+    acting = true;
     // gone from this browser's view at once, even with no connection; Firebase is told now, or the next time it loads
     ls.set(OUT_KEY, "1"); remember(null);
     try { const f = await within(loadFB(), 6000); await f.U.signOut(f.auth); ls.del(OUT_KEY); } catch (e) {}
     location.reload();
+  }
+
+  /* ---- changing the email, deleting the account ----
+     Both ask for the password again: Firebase only allows them straight after signing in.
+     - A new email isn't taken on the spot. Firebase sends the new address a link, and the account changes over
+       when that link is opened (so a mistyped address can't lock anyone out). Opening it also withdraws every
+       sign-in, so each device then asks to sign in again, with the new address.
+     - Deleting removes what the account holds in the database first (the page's own syncing is stopped for
+       that, or it would put it straight back), then the account itself. What's in this browser stays, as the
+       signed-out copy: the Health data never was in the account, and Your data has its own way to remove it. */
+  const again = async (f, pass) => {
+    const u = f.auth.currentUser; if (!u || !me || u.uid !== me.uid) throw {code: "auth/user-token-expired"};
+    await f.U.reauthenticateWithCredential(u, f.U.EmailAuthProvider.credential(u.email, pass));
+    return u;
+  };
+  async function changeEmail(email, pass) {
+    const f = await within(loadFB()), u = await again(f, pass);
+    await f.U.verifyBeforeUpdateEmail(u, email);
+  }
+  function moveOut(uid) {
+    const mine = BASE + nsOf(uid);
+    for (const k of keysUnder(mine)) {
+      const v = ls.get(k); ls.del(k); if (v == null) continue;
+      let rest = k.slice(mine.length);
+      if (rest === "-tags-last") continue;                 // whose list it was: nobody's now
+      if (rest === "-tags-" + uid) rest = "-tags";
+      ls.set(BASE + rest, v);
+    }
+  }
+  async function deleteAccount(pass) {
+    const f = await within(loadFB()), u = await again(f, pass), uid = u.uid, root = "users/" + uid + "/pulse/main";
+    acting = leaving = true;
+    try {
+      // twice over, with a pause before each: a save that was already on its way when this started lands first
+      for (let round = 0; round < 2; round++) {
+        await new Promise(r => setTimeout(r, 1200));
+        for (const c of ["months", "prefs"]) {
+          const q = await within(f.F.getDocs(f.F.collection(f.store, root + "/" + c)));
+          for (const d of q.docs) await within(f.F.deleteDoc(f.F.doc(f.store, root + "/" + c + "/" + d.id)));
+        }
+        await within(f.F.deleteDoc(f.F.doc(f.store, root)));
+      }
+      await within(f.U.deleteUser(u));
+    } catch (e) { acting = leaving = false; throw e; }
+    moveOut(uid); ls.del(OUT_KEY); remember(null); location.reload();
   }
 
   /* ---- the dialog ---- */
@@ -177,33 +237,54 @@
     "user-disabled": "That account has been turned off.",
     "operation-not-allowed": "Signing in with email and a password isn't turned on for this site yet.",
     "unauthorized-domain": "This web address isn't allowed to sign in yet. It has to be added in the Firebase console.",
+    "invalid-new-email": "That doesn't look like an email address.",
+    "requires-recent-login": "Sign out, sign in again, then try this once more.",
+    "user-token-expired": "This device has been signed out of the account. Sign in again, then try this once more.",
+    "unavailable": "Couldn't reach the account service. Check your connection and try again.",
   };
+  // in the sheets that only ask for the password, a refusal is about the password
+  const PASS_MSG = "That password isn't right.", BAD_PASS = /invalid-credential|wrong-password|user-mismatch|invalid-login-credentials/;
   const say = e => MSG[String(e && e.code || "").replace(/^.*\//, "")] || (e && /import|fetch|module/i.test(String(e.message || e)) ? MSG["network-request-failed"] : "That didn't work. Try again in a moment.");
   let dlg = null, mode = "in";
   const $ = id => dlg.querySelector("#" + id);
+  const FORMS = {
+    in: {title: "Sign in to Pulse", go: "Sign in",
+      why: "Your supplements, tags, check-ins and settings come from your account. Health data already in this browser moves into it here, and is never sent anywhere."},
+    new: {title: "Create your account", go: "Create account",
+      why: "Your supplements, tags, check-ins and settings are saved to your account and follow you to every device. What's in this browser moves into it. Health data stays in this browser."},
+    email: {title: "Change your email", go: "Send the link",
+      why: "A link goes to the new address. Your email changes when you open it, and every device then asks you to sign in again with the new address."},
+    delete: {title: "Delete your account", go: "Delete account",
+      why: "This deletes your Pulse account and everything saved in it: your supplements, tags, check-ins and settings. It can't be undone. What's on this device stays here, signed out."},
+  };
   function draw() {
-    const isNew = mode === "new";
-    $("acTitle").textContent = isNew ? "Create your account" : "Sign in to Pulse";
-    $("acWhy").textContent = isNew
-      ? "Your supplements, tags, check-ins and settings are saved to your account and follow you to every device. What's in this browser moves into it. Health data stays in this browser."
-      : "Your supplements, tags, check-ins and settings come from your account. Health data already in this browser moves into it here, and is never sent anywhere.";
-    $("acPass").autocomplete = isNew ? "new-password" : "current-password";
-    $("acGo").textContent = isNew ? "Create account" : "Sign in";
-    $("acSwitch").textContent = isNew ? "I already have an account" : "Create an account";
-    $("acForgot").hidden = isNew;
+    const f = FORMS[mode], own = mode === "email" || mode === "delete";
+    $("acTitle").textContent = f.title;
+    $("acWhy").textContent = f.why;
+    $("acEmailL").textContent = mode === "email" ? "New email" : "Email";
+    $("acPassL").textContent = mode === "email" ? "Current password" : "Password";
+    $("acEmail").parentElement.hidden = mode === "delete";
+    $("acEmail").autocomplete = mode === "email" ? "email" : "username";
+    $("acPass").autocomplete = mode === "new" ? "new-password" : "current-password";
+    $("acGo").textContent = f.go;
+    $("acGo").className = mode === "delete" ? "btn danger" : "btn primary";
+    $("acSwitch").textContent = mode === "new" ? "I already have an account" : "Create an account";
+    $("acSwitch").parentElement.hidden = own;
+    $("acForgot").hidden = mode !== "in";
+    $("acForgot").parentElement.style.justifyContent = $("acForgot").hidden ? "flex-end" : "";
     note("");
   }
   function note(text, good) { const n = $("acNote"); n.hidden = !text; n.textContent = text; n.className = good ? "ac-ok" : "err"; }
   function busy(on) { for (const b of dlg.querySelectorAll("button, input")) b.disabled = on; if (on) $("acGo").textContent = "One moment…"; else draw.label(); }
-  draw.label = () => { $("acGo").textContent = mode === "new" ? "Create account" : "Sign in"; };
+  draw.label = () => { $("acGo").textContent = FORMS[mode].go; };
   function open(start) {
     if (!dlg) {
       dlg = document.createElement("dialog"); dlg.className = "sheet acct"; dlg.setAttribute("aria-labelledby", "acTitle");
       dlg.innerHTML = `<div class="sheet-head"><h2 id="acTitle"></h2><button type="button" class="iconbtn" id="acClose" aria-label="Close" style="width:36px;height:36px;font-size:20px">×</button></div>
         <form class="sheet-body" id="acForm" novalidate>
           <p class="explain" id="acWhy" style="margin:0"></p>
-          <label class="ac-f" for="acEmail"><span>Email</span><input type="email" id="acEmail" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required></label>
-          <label class="ac-f" for="acPass"><span>Password</span><input type="password" id="acPass" name="password" autocomplete="current-password" required></label>
+          <label class="ac-f" for="acEmail"><span id="acEmailL">Email</span><input type="email" id="acEmail" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required></label>
+          <label class="ac-f" for="acPass"><span id="acPassL">Password</span><input type="password" id="acPass" name="password" autocomplete="current-password" required></label>
           <p id="acNote" class="err" role="status" hidden style="margin:0"></p>
           <div class="ac-row"><button type="button" class="linkbtn" id="acForgot" style="font-size:13px">Forgot your password?</button><button type="submit" class="btn primary" id="acGo"></button></div>
           <p style="margin:0;padding-top:12px;border-top:1px solid var(--line)"><button type="button" class="linkbtn" id="acSwitch" style="font-size:13.5px"></button></p>
@@ -221,21 +302,37 @@
       };
       $("acForm").addEventListener("submit", async e => {
         e.preventDefault();
-        const email = $("acEmail").value.trim(), pass = $("acPass").value;
-        if (!email) { note(MSG["missing-email"]); $("acEmail").focus(); return; }
+        const email = $("acEmail").value.trim(), pass = $("acPass").value, own = mode === "email" || mode === "delete";
+        if (!email && mode !== "delete") { note(MSG["missing-email"]); $("acEmail").focus(); return; }
+        if (mode === "email" && me && email.toLowerCase() === String(me.email || "").toLowerCase()) { note("That's the email you already use."); $("acEmail").focus(); return; }
         if (!pass) { note(MSG["missing-password"]); $("acPass").focus(); return; }
         busy(true);
         try {
-          const f = await loadFB(), isNew = mode === "new";
-          const cred = isNew ? await f.U.createUserWithEmailAndPassword(f.auth, email, pass) : await f.U.signInWithEmailAndPassword(f.auth, email, pass);
-          $("acGo").textContent = "Signed in";
-          enter(cred.user, isNew);
-        } catch (e2) { busy(false); note(say(e2)); if (/password|credential/.test(String(e2 && e2.code))) $("acPass").select(); }
+          if (mode === "email") {
+            await changeEmail(email, pass);
+            busy(false); $("acPass").value = "";
+            note("A link is on its way to " + email + ". Open it to finish. Until then, keep signing in with " + (me.email || "your current email") + ".", true);
+          } else if (mode === "delete") {
+            $("acGo").textContent = "Deleting…";
+            await deleteAccount(pass);
+          } else {
+            acting = true;
+            const f = await loadFB(), isNew = mode === "new";
+            const cred = isNew ? await f.U.createUserWithEmailAndPassword(f.auth, email, pass) : await f.U.signInWithEmailAndPassword(f.auth, email, pass);
+            $("acGo").textContent = "Signed in";
+            enter(cred.user, isNew);
+          }
+        } catch (e2) {
+          if (!own) acting = false;
+          busy(false); note(own && BAD_PASS.test(String(e2 && e2.code)) ? PASS_MSG : say(e2));
+          if (/password|credential/.test(String(e2 && e2.code))) $("acPass").select();
+        }
       });
     }
-    mode = start === "new" ? "new" : "in"; draw();
+    mode = FORMS[start] && (me || (start !== "email" && start !== "delete")) ? start : "in"; draw();
+    $("acEmail").value = ""; $("acPass").value = "";
     if (typeof showSheet === "function") showSheet(dlg); else if (!dlg.open) dlg.showModal();
-    $("acEmail").focus();
+    $(mode === "delete" ? "acPass" : "acEmail").focus();
   }
   document.addEventListener("click", e => {
     const b = e.target.closest && e.target.closest("[data-acct]"); if (!b) return;
@@ -254,6 +351,8 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
 .ac-ok{color:var(--good)}
 .ac-line{margin-top:14px;font-size:14px;color:var(--text-sub)}
 .ac-ver{margin:12px 0 0;font-size:12.5px;color:var(--text-sub)}
+.ac-links{margin:12px 0 0;font-size:13px;color:var(--text-sub)}
+.ac-links .linkbtn{font-size:13px}
 @media (max-width:560px){.acct .sheet-body{gap:9px}.ac-f{gap:4px}.ac-f input{padding:8px 10px}.ac-line{font-size:13px;margin-top:10px}.ac-ver{font-size:12px;margin-top:10px}}
 </style>`);
 
@@ -301,13 +400,15 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
     panelHTML: status => me
       ? `<div class="panel dl-acct"><h2 style="margin-bottom:10px">Account</h2>
           <div class="set-row" style="border-top:0;padding:0"><p class="set-k" style="overflow-wrap:anywhere">${safe(me.email || "Signed in")}<small class="acct-status">${safe(status || "")}</small></p>
-          <button type="button" class="btn sm" data-acct="out">Sign out</button></div>${version()}</div>`
+          <button type="button" class="btn sm" data-acct="out">Sign out</button></div>
+          <p class="ac-links"><button type="button" class="linkbtn" data-acct="email">Change email</button> · <button type="button" class="linkbtn" data-acct="delete">Delete account</button></p>${version()}</div>`
       : `<div class="panel dl-acct"><h2 style="margin-bottom:6px">Account</h2>
           <p class="explain">Sign in to keep your supplements, tags, check-ins and settings in a Pulse account, so they follow you to every device. Health data isn't sent anywhere: it stays in this browser.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn primary" data-acct="in">Sign in</button><button type="button" class="btn" data-acct="new">Create an account</button></div>${version()}</div>`,
     // the line under the upload box, before any Health data is loaded
     welcomeHTML: () => me
-      ? `<p class="ac-line">Signed in as <b style="overflow-wrap:anywhere">${safe(me.email || "your account")}</b> · <button type="button" class="linkbtn" data-acct="out">Sign out</button></p>`
+      ? `<p class="ac-line">Signed in as <b style="overflow-wrap:anywhere">${safe(me.email || "your account")}</b> · <button type="button" class="linkbtn" data-acct="out">Sign out</button></p>
+         <p class="ac-links" style="margin-top:6px"><button type="button" class="linkbtn" data-acct="email">Change email</button> · <button type="button" class="linkbtn" data-acct="delete">Delete account</button></p>`
       : `<p class="ac-line">Have a Pulse account? <button type="button" class="linkbtn" data-acct="in">Sign in</button> · <button type="button" class="linkbtn" data-acct="new">Create one</button></p>`,
   };
 })();
