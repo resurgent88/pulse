@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pMieOWYe7U1BfrgOSKSiteorevHYyGWy50hJOBO2aGY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-d12lXlOY+3zWCyb3+scBZ5zTGCmCMUV0msA6xQK3fO4=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pMieOWYe7U1BfrgOSKSiteorevHYyGWy50hJOBO2aGY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-sfQ38VSINCgX7u+cXIf/aoaahBapQ7NQCPzg4E60Jf8=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -6199,6 +6199,9 @@ const isAsNeeded = s => AS_NEEDED_RE.test(s.dose || "") || AS_NEEDED_RE.test(LIB
 const WHEN_TXT = {morning: "morning", food: "with food", any: "any time", bed: "before bed", asneeded: "as needed"};
 function migrateSupps(list) {
   if (!Array.isArray(list)) return list;
+  // a row that isn't a supplement at all (a gap, a stray value, nothing to call it by: a damaged copy) is left
+  // out, so one bad row can't stop the page that draws the list
+  list = list.filter(x => x && typeof x === "object" && !Array.isArray(x) && typeof x.id === "string" && x.id);
   // the two beta-alanine rows became one
   const i1 = list.findIndex(x => x && x.id === "ba1"), i2 = list.findIndex(x => x && x.id === "ba2");
   if (i1 >= 0 && i2 >= 0 && !list.some(x => x && x.id === "ba")) {
@@ -6238,6 +6241,18 @@ function migrateSupps(list) {
     return out;
   });
 }
+/* What comes back from this browser or from the account is checked for shape before anything draws from it. A
+   damaged copy (a gap where a tag or a day should be, text where a list should be) then costs only the damaged
+   piece, where it used to stop every page that reads the list. A copy in good shape comes through unchanged. */
+const isRec = v => !!v && typeof v === "object" && !Array.isArray(v);
+const strList = v => Array.isArray(v) ? v.filter(x => typeof x === "string" && x) : [];
+const tidyCustom = v => (Array.isArray(v) ? v : []).filter(t => isRec(t) && typeof t.id === "string" && t.id && typeof t.name === "string" && t.name);
+const tidyPinned = v => Array.isArray(v) ? strList(v) : null;
+const tidyDays = v => {
+  const out = {};
+  if (isRec(v)) for (const [k, d] of Object.entries(v)) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && isRec(d)) out[k] = {...d, t: strList(d.t), s: strList(d.s)};
+  return out;
+};
 const TG ={mode: "local", error: false, custom: [], pinned: null, supps: null, days: {}, dismissed: [],
   listeners: new Set(), dirty: new Set(), timers: {}, chain: {}, setDirty: false,
   // writes that failed and haven't gone up since (key → whether it's worth sending again by itself), and the timer that sends them again
@@ -6281,9 +6296,9 @@ function tgLoadLocal(key) {
   try {
     const o = JSON.parse(localStorage.getItem(key) || "null");
     if (o) {
-      TG.custom = o.custom || []; TG.pinned = o.pinned || null; TG.supps = migrateSupps(o.supps) || null; TG.days = o.days || {}; TG.setDirty = !!o.setDirty;
-      TG.dismissed = Array.isArray(o.dismissed) ? o.dismissed : [];
-      TG.prefs = o.prefs && typeof o.prefs === "object" ? o.prefs : null; TG.prefsKeys = new Set(Array.isArray(o.prefsKeys) ? o.prefsKeys : []);
+      TG.custom = tidyCustom(o.custom); TG.pinned = tidyPinned(o.pinned); TG.supps = migrateSupps(o.supps) || null; TG.days = tidyDays(o.days); TG.setDirty = !!o.setDirty;
+      TG.dismissed = strList(o.dismissed);
+      TG.prefs = isRec(o.prefs) ? o.prefs : null; TG.prefsKeys = new Set(Array.isArray(o.prefsKeys) ? o.prefsKeys : []);
       // dirty lists the days edited here that the cloud hasn't got; older copies listed whole months ("2026-09"), read as every day of it kept here
       const ds = Array.isArray(o.dirty) ? o.dirty : [];
       TG.dirty = new Set(ds.flatMap(d => /^\d{4}-\d{2}$/.test(d) ? Object.keys(TG.days).filter(k => k.startsWith(d + "-")) : [d]));
@@ -6859,7 +6874,7 @@ async function tgInit() {
       firstS = false;
       const b = snap.data() || {};
       const rawS = Array.isArray(b.supps) ? b.supps : null, migS = migrateSupps(rawS);
-      const next = {custom: Array.isArray(b.custom) ? b.custom : [], pinned: Array.isArray(b.pinned) ? b.pinned : null, supps: migS, dismissed: Array.isArray(b.dismissed) ? b.dismissed : []};
+      const next = {custom: tidyCustom(b.custom), pinned: tidyPinned(b.pinned), supps: migS, dismissed: strList(b.dismissed)};
       // save the folded-in notes and new recipes back, once. migrateSupps always hands back a new array,
       // and the server returns keys in its own order, so compare content with sorted keys: comparing the
       // arrays themselves re-saved the list after every snapshot, forever
@@ -6917,7 +6932,8 @@ async function tgInit() {
         else if (firstM && !remote.has(k.slice(0, 7))) { fresh[k] = v; upload.push(k); } // tagged in this browser before sync: upload it
       }
       firstM = false;
-      if (JSON.stringify(fresh) !== JSON.stringify(TG.days)) { TG.days = fresh; tgSaveLocal(); tgNotify(); }
+      const next = tidyDays(fresh);
+      if (JSON.stringify(next) !== JSON.stringify(TG.days)) { TG.days = next; tgSaveLocal(); tgNotify(); }
       tgQueueDays(upload);
     }, e => { console.warn(e); TG.error = true; tgNotify(); });
   } catch (e) { console.warn("Pulse: sync unavailable", e); }
