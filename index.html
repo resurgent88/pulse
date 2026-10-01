@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O4NvyQWZ8eaPs4SYhHBP6alEkfvN80745R+lMVzG5YA=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-86Tpiw4hswDVdXldWKe2Rk7Q5Ykse/iRPfa6+TZ+cmg=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pMieOWYe7U1BfrgOSKSiteorevHYyGWy50hJOBO2aGY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-d12lXlOY+3zWCyb3+scBZ5zTGCmCMUV0msA6xQK3fO4=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -121,7 +121,12 @@
     : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, enc(x)])) : v;
   const dec = v => Array.isArray(v) ? v.map(dec)
     : v && typeof v === "object" ? (Object.keys(v).length === 1 && Array.isArray(v["~a"]) ? v["~a"].map(dec) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dec(x)]))) : v;
-  const clean = v => enc(JSON.parse(JSON.stringify(v)));
+  // (a write is always a document, an object; anything else is turned away here as a write that can't succeed,
+  // which the page doesn't send again, rather than as the service being out of reach, which it would)
+  const clean = v => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) throw {code: "transform_error", message: "nothing to save"};
+    return enc(JSON.parse(JSON.stringify(v)));
+  };
   const fbErr = e => {
     if (e && typeof e.code === "string" && !/[-/]/.test(e.code) && e.message) return e;   // already in the page's terms
     const c = String(e && e.code || "").replace(/^.*\//, "");
@@ -166,6 +171,17 @@
        from the account, and the signed-out ones stay behind rather than being written over it.
      Moved, not copied, so signing out leaves none of it on view. */
   const keysUnder = prefix => ls.keys().filter(k => k === prefix || k.startsWith(prefix + "-"));
+  /* A key gets its new name without ever being missing: it's written under the new name first, and only then
+     removed from the old one, so a write the browser refuses (or a tab closed halfway) can't lose it. Health data
+     can take up most of what a browser allows a site, with no room for two copies at once; then the old one has
+     to go first, and it's put back if the new one still can't be written. It says whether the move happened. */
+  const rename = (from, to, v) => {
+    const put = () => ls.set(to, v) && ls.get(to) === v;   // written, and read back the same
+    if (put()) { ls.del(from); return true; }
+    ls.del(from);
+    if (put()) return true;
+    ls.set(from, v); return false;
+  };
   function moveIn(uid, isNew) {
     const mine = BASE + nsOf(uid);
     if (keysUnder(mine).length) return;
@@ -173,7 +189,7 @@
       if (k.startsWith(BASE + "-u-")) continue;                        // another account's copy
       if (!isNew && k.startsWith(BASE + "-tags")) continue;
       const v = ls.get(k); if (v == null) continue;
-      ls.del(k); if (!ls.set(mine + k.slice(BASE.length), v)) ls.set(k, v);   // (no room: it stays where it was)
+      rename(k, mine + k.slice(BASE.length), v);                       // (no room: it stays where it was)
     }
   }
   function enter(user, isNew) { moveIn(user.uid, isNew); ls.del(OUT_KEY); remember(user); location.reload(); }
@@ -195,21 +211,25 @@
        signed-out copy: the Health data never was in the account, and Your data has its own way to remove it. */
   const again = async (f, pass) => {
     const u = f.auth.currentUser; if (!u || !me || u.uid !== me.uid) throw {code: "auth/user-token-expired"};
-    await f.U.reauthenticateWithCredential(u, f.U.EmailAuthProvider.credential(u.email, pass));
+    // (the address as Firebase has it; this browser's note of it if Firebase hands back none)
+    const email = u.email || me.email; if (!email) throw {code: "auth/user-token-expired"};
+    await f.U.reauthenticateWithCredential(u, f.U.EmailAuthProvider.credential(email, pass));
     return u;
   };
   async function changeEmail(email, pass) {
     const f = await within(loadFB()), u = await again(f, pass);
     await f.U.verifyBeforeUpdateEmail(u, email);
   }
+  /* The account's copy becomes this browser's signed-out copy. Where a signed-out copy is already here (a
+     supplement list left behind at sign-in, say), the account's takes its place: it's the one that was on screen. */
   function moveOut(uid) {
     const mine = BASE + nsOf(uid);
     for (const k of keysUnder(mine)) {
-      const v = ls.get(k); ls.del(k); if (v == null) continue;
+      const v = ls.get(k); if (v == null) continue;
       let rest = k.slice(mine.length);
-      if (rest === "-tags-last") continue;                 // whose list it was: nobody's now
+      if (rest === "-tags-last") { ls.del(k); continue; }  // whose list it was: nobody's now
       if (rest === "-tags-" + uid) rest = "-tags";
-      ls.set(BASE + rest, v);
+      rename(k, BASE + rest, v);                           // (no room: it stays where it was)
     }
   }
   async function deleteAccount(pass) {
@@ -6606,11 +6626,15 @@ function fromCloudDay(v) {
   const tm = Array.isArray(v.tm) ? Object.fromEntries(v.tm.filter(x => Array.isArray(x) && Array.isArray(x[1]))) : v.tm && typeof v.tm === "object" ? v.tm : null;
   return {...(Object.keys(f).length ? {f} : {}), ...(v.d === true ? {d: true} : {}), ...(tm && Object.keys(tm).length ? {tm} : {})};
 }
+/* The writes for one key (a month, "_s", "_p") go up one after another. A step that throws something unexpected must
+   not end its queue, or every later write for that key would be skipped until a reload, with nothing on screen to
+   say so: it's logged and counted as a failed write, so sync reads as paused and the write is sent again. */
+const tgStep = (key, fn) => TG.chain[key] = (TG.chain[key] || Promise.resolve()).then(fn).catch(e => { console.warn("Pulse: sync step failed", e); tgFailed(key, e); });
 function tgFlushMonth(m) {
   clearTimeout(TG.timers[m]);
   TG.timers[m] = setTimeout(() => {
     delete TG.timers[m];
-    TG.chain[m] = (TG.chain[m] || Promise.resolve()).then(async () => {
+    tgStep(m, async () => {
       const ks = [...TG.dirty].filter(k => k.slice(0, 7) === m); if (!ks.length) { tgSent(m); return; }
       // a day cleared here goes up as null, which the readers skip
       const local = Object.fromEntries(ks.map(k => [k, TG.days[k] ?? null])), days = Object.fromEntries(ks.map(k => [k, toCloudDay(local[k])]));
@@ -6704,8 +6728,8 @@ function tgQueueSettings() {
   clearTimeout(TG.timers._s);
   TG.timers._s = setTimeout(() => {
     delete TG.timers._s;
-    TG.chain._s = (TG.chain._s || Promise.resolve()).then(() => tgWrite(TG.settingsRef, () => ({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed}), "_s"))
-      .then(ok => { if (ok && !TG.timers._s) { TG.setDirty = false; tgSaveLocal(); } });
+    tgStep("_s", () => tgWrite(TG.settingsRef, () => ({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed}), "_s")
+      .then(ok => { if (ok && !TG.timers._s) { TG.setDirty = false; tgSaveLocal(); } }));
   }, 500);
 }
 // body() is asked again on a retry, so the second try sends the list as it is by then
@@ -6729,12 +6753,12 @@ function tgFlushPrefs() {
   TG.timers._p = setTimeout(() => {
     delete TG.timers._p;
     const sent = [...TG.prefsKeys], body = {...TG.prefs};
-    TG.chain._p = (TG.chain._p || Promise.resolve()).then(() => tgWrite(TG.prefsRef, () => body, "_p")).then(ok => {
+    tgStep("_p", () => tgWrite(TG.prefsRef, () => body, "_p").then(ok => {
       if (!ok) return;
       // keys changed again while this was on its way stay marked for the next write
       for (const k of sent) if (stableJSON(TG.prefs[k]) === stableJSON(body[k])) TG.prefsKeys.delete(k);
       tgSaveLocal();
-    });
+    }));
   }, 500);
 }
 // what this browser had set before its settings went to the account: only what was actually chosen, not the defaults
