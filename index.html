@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-IQNQUOzO9qYj3kCd1JeIo2fjPKA/5v853JjAqmYO+I4=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-FYpeH/PFaX3yFN7rxu7UkxHacZ5DQo1Pv4uIbLwG1AY=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -28,6 +29,14 @@
    ============================================================ */
 (() => {
   "use strict";
+  /* Pulse is never meant to be shown inside another site's page: there, taps could be steered onto its buttons
+     without the person seeing what they're pressing. If it finds itself in a frame it shows nothing, and asks
+     the browser to open it properly instead. */
+  if (window.top !== window.self) {
+    document.documentElement.style.display = "none";
+    try { window.top.location = window.self.location.href; } catch (e) {}
+    throw new Error("Pulse doesn't run inside another page");
+  }
   // The project's public identifiers. Not secrets: what protects the data is the database's rules.
   const CONFIG = {
     apiKey: "AIzaSyCkhKBojNl26ehSTOgapK1zDbTblVYkdlo",
@@ -230,7 +239,7 @@
     "missing-password": "Enter your password.",
     "missing-email": "Enter your email address.",
     "email-already-in-use": "There's already an account with that email. Sign in instead.",
-    "weak-password": "Choose a longer password: at least 6 characters.",
+    "weak-password": "Choose a longer password: at least 8 characters.",
     "password-does-not-meet-requirements": "That password doesn't meet the requirements. Try a longer one, with letters and numbers.",
     "too-many-requests": "Too many tries. Wait a few minutes, then try again.",
     "network-request-failed": "Couldn't reach the account service. Check your connection and try again.",
@@ -306,6 +315,8 @@
         if (!email && mode !== "delete") { note(MSG["missing-email"]); $("acEmail").focus(); return; }
         if (mode === "email" && me && email.toLowerCase() === String(me.email || "").toLowerCase()) { note("That's the email you already use."); $("acEmail").focus(); return; }
         if (!pass) { note(MSG["missing-password"]); $("acPass").focus(); return; }
+        // (Firebase itself accepts 6; a new account here needs a little more)
+        if (mode === "new" && pass.length < 8) { note(MSG["weak-password"]); $("acPass").focus(); return; }
         busy(true);
         try {
           if (mode === "email") {
