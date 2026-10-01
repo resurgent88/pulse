@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-pMieOWYe7U1BfrgOSKSiteorevHYyGWy50hJOBO2aGY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-sfQ38VSINCgX7u+cXIf/aoaahBapQ7NQCPzg4E60Jf8=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Sk77V5r6VQFVqYM2PY7ATQjkKA9UWvkTshsZ4q1CigU=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-j82cKlJM8b7AmCzILFz8N7fCngs7WcECy63k7S6U2ac=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -429,19 +429,37 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
   const CONTACT = "resurgent88.dev@gmail.com";
   window.PULSE_HOST = {
     ns: nsOf(me && me.uid), uid: me ? me.uid : null, email: me ? me.email : null,
-    /* The privacy policy, shown as the Privacy row on Your data and on the welcome page. It describes what this
+    /* The privacy policy, shown as the Privacy Policy row on Your data and on the welcome page. It describes what this
        script and the page really do: keep it in step with them (what syncs, which services are contacted, how
        data is deleted) and move the date when it changes. */
-    privacyHTML: () => `<ul>
-      <li><b>Your Health data stays on your device.</b> Pulse reads your Apple Health export inside your browser and saves the results only in that browser. It is never uploaded, with or without an account.</li>
-      <li><b>What an account stores.</b> If you create a Pulse account, these are saved to it so they follow you between devices: your email address, your supplement list and its check-offs, your tags, your daily check-ins (including how you rated your energy, mood and stress), and your settings. Your password goes straight to Google's sign-in service, which keeps it in a form that can't be read back. The person who runs Pulse can't see it.</li>
-      <li><b>Where it's kept, and who can see it.</b> Account data is stored with Google Firebase. The database's rules stop every other user from reading it. The person who runs Pulse can access it as the database's administrator, and doesn't sell it, share it, or use it for anything except running Pulse.</li>
-      <li><b>Other services this page contacts.</b> GitHub hosts the site. Google provides sign-in, the database and the fonts. jsDelivr provides the code that draws molecules. Each sees your IP address when your browser loads from it, as with any website. None of them receives your Health data.</li>
-      <li><b>No tracking.</b> Pulse has no ads, no analytics and no tracking cookies. It uses your browser's storage only to remember your data and settings.</li>
-      <li><b>Deleting your data.</b> “Delete account” removes your account and everything saved in it. “Remove my data from this browser” removes the Health data saved on that device. Signing out by itself leaves that device's copy in place.</li>
-      <li><b>Questions.</b> Write to <a href="mailto:${CONTACT}">${CONTACT}</a>.</li>
-      <li class="pv-date">Last updated October 1, 2026.</li>
-    </ul>`,
+    privacyHTML: () => `<div class="pv-body">
+      <p class="pv-lead">Your Apple Health data never leaves your browser. With an account, a few things you enter (supplements, tags, daily check-ins, settings) sync to it. Nothing is sold.</p>
+      <h3>Your Apple Health data stays on this device</h3>
+      <p>Pulse reads your export inside your browser and saves the results only in this browser. It is never uploaded, with or without an account.</p>
+      <h3>What syncs with an account</h3>
+      <p>Your email address, your supplement list and check-offs, your tags, your daily check-ins (your energy, mood and stress ratings), and your settings. These sync so they follow you to other devices. Nothing else syncs.</p>
+      <h3>Your password</h3>
+      <p>Your password goes directly to Google's sign-in service, which stores it scrambled (hashed). Pulse does not store it and cannot read it back.</p>
+      <h3>Who can see your account data</h3>
+      <p>It is stored in Google Firebase, encrypted in transit and at rest, and other users can't read it. It is used only to run Pulse, and it is never sold or shared. Pulse has administrator access to its database, as any service does, and your account data is not looked at unless the law requires it.</p>
+      <h3>Other services this page contacts</h3>
+      <p>GitHub hosts the site. Google provides sign-in, the database and the fonts. jsDelivr provides the code that draws molecules. Like any website, each one sees your IP address when your browser loads from it. None of them gets your Apple Health data.</p>
+      <h3>No tracking</h3>
+      <p>Pulse has no ads, no analytics and no tracking cookies. It uses your browser's storage only to save your data and settings.</p>
+      <h3>How long it's kept</h3>
+      <p>Until you delete it.</p>
+      <h3>Deleting your data</h3>
+      <ul>
+        <li>“Delete account” erases your account and everything synced to it.</li>
+        <li>“Remove my data from this browser” erases the Apple Health data saved on this device.</li>
+        <li>Signing out does not erase anything from this device. On a shared computer, use “Remove my data from this browser” too.</li>
+      </ul>
+      <h3>Changes</h3>
+      <p>If this policy changes, the date below changes too.</p>
+      <h3>Questions</h3>
+      <p>Email <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
+      <p class="pv-date">Last updated October 1, 2026.</p>
+    </div>`,
     // the card on Your data
     panelHTML: status => me
       ? `<div class="panel dl-acct"><h2 style="margin-bottom:10px">Account</h2>
@@ -1588,9 +1606,13 @@ dialog.sheet.mv{width:min(560px,calc(100vw - 24px))}
 /* the Privacy row runs the full width under both, spaced by the grid's gap alone */
 .welcome > .wl-priv{grid-column:1/-1}
 .welcome .panel + .panel{margin-top:0}
-.pv li b{color:var(--text)}
+/* the policy: a short summary, then a heading and a line or two for each thing it covers */
+.pv p{margin:0;color:var(--text-sub)}
+.pv .pv-lead{margin-top:10px;color:var(--text)}
+.pv h3{margin:16px 0 4px;font-size:14.5px}
+.pv ul{margin-top:0}
 .pv a{color:var(--text);font-weight:600;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
-.pv .pv-date{list-style:none;margin-left:-20px;font-size:12.5px}
+.pv .pv-date{margin-top:16px;font-size:12.5px}
 /* wide: the heading above, and "How to get your file" level with the upload box beside it, their middles lined up */
 @media (min-width:821px){
   .welcome{grid-template-areas:"intro ." "drop how";row-gap:20px}
@@ -3416,7 +3438,7 @@ document.addEventListener("click", e => {
 
 /* The Privacy row, under "How Pulse reads your export" and on the welcome page. Only where Pulse runs its own
    accounts: the policy is that site's, and its words come from the accounts script. */
-const privacyRow = cls => HOST && HOST.privacyHTML ? `<div class="panel pv ${cls}"><details class="how-fit"><summary>Privacy</summary>${HOST.privacyHTML()}</details></div>` : "";
+const privacyRow = cls => HOST && HOST.privacyHTML ? `<div class="panel pv ${cls}"><details class="how-fit"><summary>Privacy Policy</summary>${HOST.privacyHTML()}</details></div>` : "";
 
 /* ---------- Welcome (blank slate) ---------- */
 function renderWelcome() {
