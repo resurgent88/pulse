@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-rBHUpmH8LtDmgmwyeMXU2M4RzA4U035DXxRyOSBINNM=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-j82cKlJM8b7AmCzILFz8N7fCngs7WcECy63k7S6U2ac=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-hKF+dFoTRr9jrBdYi2I0GVivAt+WXnMYRRxVT9R1cLs=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -134,6 +134,15 @@
   };
   const within = (p, ms = 20000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no({code: "unavailable", message: "no answer from the account service"}), ms))]);
   let leaving = false;   // the account is being deleted: nothing more is read from it or written to it
+  /* Deleting is done by one tab, and any other tab of this browser still open on the account has to stand back too.
+     Left to itself it sees the check-ins leave the account month by month, takes that for changes made on another
+     device, and saves this browser's copy without them: the very copy the deleting tab then keeps as "signed out". */
+  const LEAVE_KEY = "pulse-account-leaving";
+  addEventListener("storage", e => {
+    if (e.key !== LEAVE_KEY || acting) return;
+    leaving = !!(e.newValue && me && e.newValue === me.uid);
+    if (leaving) setTimeout(() => { if (!acting) leaving = false; }, 120000);   // the deleting tab was closed halfway: carry on
+  });
   const run = async fn => {
     if (leaving) throw {code: "unavailable", message: "the account is being deleted"};
     let f; try { f = await within(ready()); } catch (e) { throw fbErr(e); }
@@ -154,6 +163,16 @@
     set: body => run(f => f.F.setDoc(f.F.doc(f.store, real(path)), clean(body))),
     update: body => run(f => f.F.setDoc(f.F.doc(f.store, real(path)), clean(body), {merge: true})),
     delete: () => run(f => f.F.deleteDoc(f.F.doc(f.store, real(path)))),
+    /* Read, work out, write, as one step: the database takes it whole or, when the document changed in between,
+       has it read and worked out again. fn gets what the account holds (undefined: nothing yet) and hands back what
+       should be there, or nothing to leave it as it is. It needs the server, so with no connection it fails as
+       "unavailable" and the page sends it again later: nothing waits in a queue to be written over newer changes. */
+    transact: fn => run(f => {
+      const ref = f.F.doc(f.store, real(path));
+      const work = async (get, set) => { const s = await get(ref), body = await fn(s.exists() ? dec(s.data()) : undefined); if (body !== undefined) await set(ref, clean(body)); return body; };
+      return typeof f.F.runTransaction === "function" ? f.F.runTransaction(f.store, tx => work(r => tx.get(r), (r, b) => { tx.set(r, b); }))
+        : work(r => f.F.getDoc(r), (r, b) => f.F.setDoc(r, b));
+    }),
     onSnapshot: (next, err) => listen(f => f.F.onSnapshot(f.F.doc(f.store, real(path)), LIVE, s => { if (!s.metadata.fromCache && !leaving) next(snapOf(s)); }, e => err && err(fbErr(e)))),
     collection: name => col(path + "/" + name)});
   const col = path => ({path, doc: id => doc(path + "/" + id),
@@ -235,6 +254,11 @@
   async function deleteAccount(pass) {
     const f = await within(loadFB()), u = await again(f, pass), uid = u.uid, root = "users/" + uid + "/pulse/main";
     acting = leaving = true;
+    /* What this browser holds for the account, as it is now, and word to its other tabs to stand back (LEAVE_KEY).
+       Should one of them save over the copy all the same, it's put back as it was before it's handed on. */
+    const kept = keysUnder(BASE + nsOf(uid)).map(k => [k, ls.get(k)]);
+    const putBack = () => { for (const [k, v] of kept) if (v != null && ls.get(k) !== v) ls.set(k, v); };
+    ls.set(LEAVE_KEY, uid);
     try {
       // twice over, with a pause before each: a save that was already on its way when this started lands first
       for (let round = 0; round < 2; round++) {
@@ -246,8 +270,8 @@
         await within(f.F.deleteDoc(f.F.doc(f.store, root)));
       }
       await within(f.U.deleteUser(u));
-    } catch (e) { acting = leaving = false; throw e; }
-    moveOut(uid); ls.del(OUT_KEY); remember(null); location.reload();
+    } catch (e) { putBack(); ls.del(LEAVE_KEY); acting = leaving = false; throw e; }
+    putBack(); moveOut(uid); ls.del(LEAVE_KEY); ls.del(OUT_KEY); remember(null); location.reload();
   }
 
   /* ---- the dialog ---- */
@@ -1985,8 +2009,11 @@ function toLatest() { S.heartSel = S.sleepSel = S.stressSel = null; S.habitDay =
    screen now but won't survive a reload, and quietly losing it on the next visit is worse than a warning. */
 function saveData() {
   if (S.sample) return true;
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({data: S.data, units: S.units})); S.saveFailed = false; return true; }
-  catch (e) { console.warn("Pulse: couldn't save the Health data in this browser", e); S.saveFailed = true; return false; }
+  const was = !!S.saveFailed;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({data: S.data, units: S.units})); S.saveFailed = false; }
+  catch (e) { console.warn("Pulse: couldn't save the Health data in this browser", e); S.saveFailed = true; }
+  if (S.saveFailed !== was) saveWarnSoon();
+  return !S.saveFailed;
 }
 // the first and last day with anything Pulse reads, daily numbers or a night's sleep; null when there's none
 function dataSpan(days, sleep) {
@@ -2027,7 +2054,7 @@ function fmtDate(i, withYear) {
 }
 function fmtDateLong(i) { const d = new Date(i*DAY); return DOW[d.getUTCDay()] + ", " + fmtDate(i, true); }
 function fmtClock(minOfDay) {
-  let m = Math.round(((minOfDay % 1440) + 1440) % 1440);
+  let m = Math.round(((minOfDay % 1440) + 1440) % 1440) % 1440;   // 11:59:40 PM rounds up to midnight, not to a 1440th minute (which read "12:00 PM")
   const h = Math.floor(m / 60), mm = m % 60;
   return ((h % 12) || 12) + ":" + String(mm).padStart(2, "0") + (h < 12 ? " AM" : " PM");
 }
@@ -3370,6 +3397,42 @@ const dataAge = () => S.data && !S.sample ? keyToIdx(todayKey()) - keyToIdx(S.da
 const dataFresh = () => dataAge() <= 1;
 const STALE_DAYS = 7;
 const FOOT_TXT = "Pulse shows what your Apple Health data says. It isn't medical advice and can't diagnose anything. If something worries you, talk to a doctor.";
+/* A save this browser turned away (its storage for the site is full) is said out loud, above every page: what's on
+   screen then won't be there after a reload. The Health data and the check-ins (with the tags and the supplement
+   list) are saved apart, so either can fail without the other. With sync running the check-ins still reach the
+   account, and it says so. */
+function saveWarnHTML() {
+  const h = !!S.saveFailed, t = !!TG.saveFailed;
+  if (S.sample || !(h || t)) return "";
+  const inAcct = TG.mode === "sync" && !TG.error;
+  const txt = !t ? "so the Health data couldn't be saved here. It's showing now, but it won't be here after a reload. Your tags and supplements aren't affected."
+    : !h ? (inAcct ? `so your check-ins, tags and supplements couldn't be saved in this browser. They're still saved to your ${ACCT}.`
+                   : "so your check-ins, tags and supplements couldn't be saved here. They're showing now, but they won't be here after a reload.")
+    : inAcct ? `so neither the Health data nor your check-ins, tags and supplements could be saved here. The Health data is showing now, but it won't be here after a reload. The rest is still saved to your ${ACCT}.`
+             : "so neither the Health data nor your check-ins, tags and supplements could be saved here. They're showing now, but they won't be here after a reload.";
+  return `<div class="banner" id="saveWarn"><span><b>This browser's storage is full</b>, ${txt}</span></div>`;
+}
+// the warning comes and goes as a save fails or works again, without waiting for the page to be drawn again
+let saveWarnT = 0;
+function saveWarnSoon() {
+  clearTimeout(saveWarnT);
+  saveWarnT = setTimeout(() => {
+    const page = $("#page"); if (!page) return;
+    $("#saveWarn")?.remove();
+    const html = saveWarnHTML(); if (html) page.insertAdjacentHTML("beforebegin", html);
+  }, 0);
+}
+/* A file that couldn't be read is said beside the file picker. When the page has been changed since (the import
+   was left running and another tab opened), there's no file picker on screen: it's said in a line above the page
+   instead, and beside the picker the next time that's opened. */
+let importErr = "";
+const importWarnHTML = () => importErr && S.tab !== "data" ? `<div class="banner" id="impWarn"><span><b>That file wasn't loaded.</b> ${esc(importErr)}</span><button class="btn" id="impGo" type="button">Try again</button></div>` : "";
+const bindImportWarn = () => { const b = $("#impGo"); if (b) b.onclick = () => { S.tab = "data"; render(); window.scrollTo({top: 0}); }; };
+function showImportWarn() {
+  $("#impWarn")?.remove();
+  const page = $("#page"), html = importWarnHTML(); if (!page || !html) return;
+  page.insertAdjacentHTML("beforebegin", html); bindImportWarn();
+}
 function render() {
   const bsk = document.getElementById("bootSk"); if (bsk) bsk.remove();
   S.cache = {};
@@ -3389,11 +3452,12 @@ function render() {
   const main = $("#main");
   const banner = S.sample ? `<div class="banner"><span>You're looking at <b>made-up sample data</b> — the numbers, the tags and the supplement list all belong to an invented person. Nothing here is real, and nothing you tap is saved. Your own tags and supplements are untouched.</span><button class="btn" id="leaveSample" type="button">Upload your own data</button></div>` : "";
   const fn = {summary: pageSummary, stress: pageStress, sleep: pageSleep, heart: pageHeart, habits: pageHabits, body: pageBody, trends: pageTrends, data: pageData}[S.tab];
-  const saveWarn = S.saveFailed && !S.sample ? `<div class="banner"><span><b>This browser's storage is full</b>, so the Health data couldn't be saved here. It's showing now, but it won't be here after a reload. Your tags and supplements aren't affected.</span></div>` : "";
+  const saveWarn = saveWarnHTML();
   const age = dataAge();
   const staleWarn = age >= STALE_DAYS && S.tab !== "data" ? `<div class="banner"><span>Your Health data ends <b>${fmtDate(keyToIdx(S.data.last), true)}</b>, ${age >= 60 ? `about ${Math.round(age / 30.4)} months` : `${age} days`} ago. Upload a newer export to see how you're doing now.</span><button class="btn" id="staleUp" type="button">Upload a newer export</button></div>` : "";
-  main.innerHTML = banner + saveWarn + staleWarn + `<section id="page"></section><p class="foot">${FOOT_TXT}</p>`;
+  main.innerHTML = banner + saveWarn + staleWarn + importWarnHTML() + `<section id="page"></section><p class="foot">${FOOT_TXT}</p>`;
   const su = $("#staleUp"); if (su) su.onclick = () => { S.tab = "data"; render(); window.scrollTo({top: 0}); };
+  bindImportWarn();
   const lb = $("#leaveSample"); if (lb) lb.onclick = () => { S.data = null; exitSample(); loadData(); toLatest(); render(); };
   fn($("#page"));
   // arriving on a tab, its top card(s) grow in from nothing to their height, as the Stress and Sleep cards do
@@ -3462,6 +3526,8 @@ function renderWelcome() {
   bindDrop();
 }
 function dropZone() {
+  // a file that couldn't be read while no file picker was on screen: said here, once
+  const failed = importErr; importErr = "";
   return `<div class="drop" id="drop">
     <svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="10" stroke="currentColor" stroke-width="2"/><path d="M20 27V13M14 19l6-6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <h3>Drop your export.zip here</h3>
@@ -3471,7 +3537,7 @@ function dropZone() {
       ${S.data ? "" : `<button class="btn quiet" type="button" id="sampleBtn">Try with sample data</button>`}
     </div>
     <div class="progress" id="prog" hidden><div class="bar"><i></i></div><p></p></div>
-    <p class="err" id="err" hidden></p>
+    <p class="err" id="err"${failed ? "" : " hidden"}>${esc(failed)}</p>
     <div class="private"><svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.6"/></svg><span>Your Health file never leaves your device. It's read inside this browser tab, and the results are saved only in this browser. ${HOST ? "Your supplement list, its check-offs, your tags and your settings are the only things that can leave it, and only once you sign in to a Pulse account: they then sync to that account, where only you can read them. Signed out, they stay in this browser too." : "Your supplement list, its check-offs, your tags and your settings are the only things that can leave it: they sync to a private space in your Claude account that only you can see, or, where your account can't sync, they stay in this browser too."}</span></div>
     ${HOST && !S.data ? HOST.welcomeHTML() : ""}
   </div>`;
@@ -3488,6 +3554,7 @@ function bindDrop() {
 async function importFile(file) {
   const prog = $("#prog"), bar = prog.querySelector("i"), msg = prog.querySelector("p"), err = $("#err");
   err.hidden = true; prog.hidden = false; $("#pick").disabled = true;
+  importErr = ""; $("#impWarn")?.remove();
   try {
     const parsed = await parseExport(file, (f, n) => { bar.style.width = (f * 100).toFixed(1) + "%"; msg.textContent = `Reading… ${Math.round(f * 100)}% · ${n.toLocaleString()} records`; });
     msg.textContent = "Crunching the numbers…";
@@ -3502,7 +3569,14 @@ async function importFile(file) {
     console.error(e);
     // the messages Pulse writes itself are shown as they are; anything else (the browser's own) gets a plain one
     const own = e && e.constructor === Error && e.message;
-    prog.hidden = true; err.hidden = false; err.textContent = own || "Pulse couldn't read that file. Make sure it's the export.zip from the Health app, or the export.xml inside it.";
+    const why = own || "Pulse couldn't read that file. Make sure it's the export.zip from the Health app, or the export.xml inside it.";
+    prog.hidden = true; err.hidden = false; err.textContent = why;
+    // the page was changed while the file was being read, so that went to a drop zone that's gone: said where the page is now
+    if (!err.isConnected) {
+      const now = $("#err"), pg = $("#prog");
+      if (now) { if (pg) pg.hidden = true; now.hidden = false; now.textContent = why; }
+      else { importErr = why; showImportWarn(); }
+    }
   } finally { const p = $("#pick"); if (p) p.disabled = false; }
 }
 
@@ -6313,8 +6387,10 @@ let tgKey = TG_BASE;
 const tgLocked = () => !S.sample && TG.who === "pending";
 function tgLoadLocal(key) {
   TG.custom = []; TG.pinned = null; TG.supps = null; TG.days = {}; TG.dismissed = []; TG.dirty = new Set(); TG.setDirty = false; TG.prefs = null; TG.prefsKeys = new Set();
+  TG.setBase = null; TG.lastRaw = null;
   try {
-    const o = JSON.parse(localStorage.getItem(key) || "null");
+    const raw = localStorage.getItem(key); TG.lastRaw = raw;   // what's saved, as read: how a save from another tab is told from this tab's own (tgAdopt)
+    const o = JSON.parse(raw || "null");
     if (o) {
       TG.custom = tidyCustom(o.custom); TG.pinned = tidyPinned(o.pinned); TG.supps = migrateSupps(o.supps) || null; TG.days = tidyDays(o.days); TG.setDirty = !!o.setDirty;
       TG.dismissed = strList(o.dismissed);
@@ -6322,8 +6398,11 @@ function tgLoadLocal(key) {
       // dirty lists the days edited here that the cloud hasn't got; older copies listed whole months ("2026-09"), read as every day of it kept here
       const ds = Array.isArray(o.dirty) ? o.dirty : [];
       TG.dirty = new Set(ds.flatMap(d => /^\d{4}-\d{2}$/.test(d) ? Object.keys(TG.days).filter(k => k.startsWith(d + "-")) : [d]));
+      // the account's tag and supplement list as this browser last knew it, kept while changes made here wait to go up (tgSendSettings)
+      if (TG.setDirty && typeof o.setBase === "string") TG.setBase = o.setBase;
     }
   } catch (e) {}
+  if (!TG.setDirty) TG.setBase = stableJSON(tgSettings());   // nothing waiting: the list here is the list the account has
 }
 /* The supplement list as last saved. While one is open in the editor its changes live in TG.supps so the check-in
    behind can show them, but they aren't saved until Done: a save that happens meanwhile (a write still waiting to go,
@@ -6333,8 +6412,34 @@ function tgSaveLocal() {
   if (S.sample || tgLocked()) return;               // sample tags live and die in memory; nobody's bucket is open yet
   // dirty days and settings ride along: a reload must still know which edits never reached the
   // cloud, or the first snapshot would treat the stale cloud copy as the truth and overwrite them
-  try { localStorage.setItem(tgKey, JSON.stringify({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed, days: TG.days, dirty: [...TG.dirty], setDirty: TG.setDirty, prefs: TG.prefs, prefsKeys: [...TG.prefsKeys]})); } catch (e) {}
+  // a browser with no room left: said above the page (saveWarnHTML), where it used to fail without a word
+  const was = !!TG.saveFailed;
+  try {
+    const raw = JSON.stringify({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed, days: TG.days, dirty: [...TG.dirty], setDirty: TG.setDirty, ...(TG.setDirty && TG.setBase ? {setBase: TG.setBase} : {}), prefs: TG.prefs, prefsKeys: [...TG.prefsKeys]});
+    localStorage.setItem(tgKey, raw); TG.lastRaw = raw; TG.saveFailed = false;
+  } catch (e) { if (!was) console.warn("Pulse: couldn't save the check-ins in this browser", e); TG.saveFailed = true; }
+  if (TG.saveFailed !== was) saveWarnSoon();
 }
+// the tag and supplement list, as it's saved and sent
+const tgSettings = () => ({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed});
+/* Another tab of this browser saved its copy. With no account syncing (signed out, or an account that can't save
+   here) the copy in this browser is the only one, and each tab used to write its whole copy over the other's: a
+   tick made in one tab was gone as soon as the other tab saved anything. So a tab takes in what another one saved,
+   as it's saved and again when it comes back to the front, and its own next save builds on that. Not while sync is
+   running: there every tab hears each change from the account itself. A supplement open in the editor keeps its
+   unsaved changes, over the list as the other tab left it. */
+function tgAdopt(raw) {
+  if (TG.mode === "sync" || TG.who === "pending") return;
+  if (raw === undefined) { try { raw = localStorage.getItem(tgKey); } catch (e) { return; } }
+  if (raw == null || raw === TG.lastRaw) return;
+  const editing = TG.editing, mine = TG.supps;
+  tgLoadLocal(tgKey);
+  if (editing) { TG.editBase = TG.supps; TG.supps = mine; }
+  tgNotify();
+}
+addEventListener("storage", e => { if (e.key === tgKey) tgAdopt(e.newValue); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tgAdopt(); });
+addEventListener("pageshow", e => { if (e.persisted) tgAdopt(); });
 // a custom tag saved under a category that's gone is listed under the one that replaced it, or under Custom
 const liveCat = t => { const c = CAT_MOVED[t.cat] || t.cat; return c === t.cat && TAG_CATS.some(x => x.id === c) ? t : {...t, cat: TAG_CATS.some(x => x.id === c) ? c : "custom"}; };
 const allTags = () => [...BASE_TAGS, ...TGD().custom.map(liveCat)];
@@ -6756,6 +6861,80 @@ const tgWriteDays = (ref, days, key) => withRetry(async () => {
     try { await ref.set(body); } catch (e2) { throw refusedOr(e2, body); }
   }
 }, key);
+/* ---- the tag and supplement list, sent without undoing another device's changes ----
+   The list goes up as one document, and two devices can both have changed it: a phone that added a tag with no
+   connection (or was closed before its save went out), a laptop that changed the list in the meantime. Sent whole,
+   the later save wiped out what the other device had done. So the save reads what the account holds now, in the
+   same step as it writes, and works the list out from three copies: the account's list as this browser last knew
+   it (TG.setBase), this browser's list, and the account's list now. What changed here since then is laid over what
+   the account has, row by row: a tag or supplement added, edited or removed here stays that way, and everything
+   else is the account's. Where both changed the same row, this browser's wins. */
+// (checked for shape like anything else read back from this browser: a damaged note counts as no note)
+const tgBase = () => {
+  try {
+    const b = TG.setBase ? JSON.parse(TG.setBase) : null; if (!isRec(b)) return null;
+    return {custom: tidyCustom(b.custom), pinned: tidyPinned(b.pinned), supps: Array.isArray(b.supps) ? b.supps.filter(x => isRec(x) && typeof x.id === "string") : null, dismissed: strList(b.dismissed)};
+  } catch (e) { return null; }
+};
+const sameJSON = (a, b) => stableJSON(a) === stableJSON(b);
+// rows with ids (tags, supplements)
+function mergeRows(base, mine, theirs) {
+  const B = new Map(base.map(x => [x.id, stableJSON(x)])), M = new Map(mine.map(x => [x.id, x])), T = new Map(theirs.map(x => [x.id, x]));
+  // the row as it should be: this browser's where it changed here (none, where it was removed here), else the account's
+  const row = id => (M.has(id) ? stableJSON(M.get(id)) : undefined) !== B.get(id) ? M.get(id) : T.get(id);
+  // the order is the account's, unless the account still has its rows in the order they were in: then it's this browser's
+  const order = (list, has) => JSON.stringify(list.map(x => x.id).filter(id => has.has(id)));
+  const lists = order(theirs, B) === order(base, T) ? [mine, theirs] : [theirs, mine];
+  const out = [], seen = new Set();
+  for (const x of lists.flat()) { if (seen.has(x.id)) continue; seen.add(x.id); const r = row(x.id); if (r) out.push(r); }
+  return out;
+}
+// plain lists of ids (pinned tags, dismissed notes): the account's, less what was taken off here, plus what was added here
+function mergeIds(base, mine, theirs) {
+  const B = new Set(base), M = new Set(mine);
+  return [...theirs.filter(id => !B.has(id) || M.has(id)), ...mine.filter(id => !B.has(id) && !theirs.includes(id))];
+}
+function mergeSettings(base, mine, theirs) {
+  // a list only one side changed is that side's, as it is; one never saved (null) stands for what a new browser starts with
+  const pick = (f, d, fn) => sameJSON(theirs[f], base[f]) ? mine[f] : sameJSON(mine[f], base[f]) ? theirs[f] : fn(base[f] || d, mine[f] || d, theirs[f] || d);
+  try {
+    return {custom: pick("custom", [], mergeRows), pinned: pick("pinned", BASE_TAGS.filter(t => t.pin).map(t => t.id), mergeIds),
+            supps: pick("supps", DEFAULT_SUPPS, mergeRows), dismissed: pick("dismissed", [], mergeIds)};
+  } catch (e) { console.warn("Pulse: couldn't merge the lists, keeping this browser's", e); return mine; }   // never worse than before: this browser's list, whole
+}
+/* Sends the list, and says whether it went through. Afterwards this browser has the merged list, and TG.setBase is
+   what the account now holds. A store that can't read and write in one step (no transact) gets the list whole, as before. */
+function tgSendSettings() {
+  const ref = TG.settingsRef;
+  let mine = null, sent = null;
+  const whole = () => (mine = sent = tgSettings());
+  const write = typeof ref.transact !== "function"
+    ? async () => { try { await ref.set(whole()); } catch (e) { throw refusedOr(e, sent); } }
+    : async () => {
+      try {
+        // (this is asked again when the account's copy changed while it was being worked out, so nothing is carried from one go to the next)
+        await ref.transact(now => {
+          if (now === undefined) return whole();                         // nothing in the account yet: this browser's list is the list
+          mine = tgSettings();
+          const theirs = {custom: tidyCustom(now.custom), pinned: tidyPinned(now.pinned), supps: migrateSupps(Array.isArray(now.supps) ? now.supps : null), dismissed: strList(now.dismissed)};
+          sent = mergeSettings(tgBase() || theirs, mine, theirs);
+          // already what the account holds: nothing to write
+          return sameJSON(sent, {custom: now.custom, pinned: now.pinned, supps: now.supps, dismissed: now.dismissed}) ? undefined : sent;
+        });
+      } catch (e) { throw refusedOr(e, sent || tgSettings()); }
+    };
+  return withRetry(write, "_s").then(ok => {
+    if (!ok) return false;
+    // changes made here while it was on its way are laid over what went up (their own save is already waiting to go)
+    const now = tgSettings(), next = sameJSON(now, mine) ? sent : mergeSettings(mine, now, sent);
+    TG.setBase = stableJSON(sent);
+    if (!sameJSON(next, now)) {
+      if (TG.editing) TG.heldSnap = {exists: true, data: () => next};   // a supplement is open in the editor: taken in when it closes, like a change from another device
+      else { Object.assign(TG, next); tgNotify(); }
+    }
+    return true;
+  });
+}
 function tgQueueSettings() {
   if (S.sample) return;
   TG.setDirty = true;
@@ -6763,8 +6942,7 @@ function tgQueueSettings() {
   clearTimeout(TG.timers._s);
   TG.timers._s = setTimeout(() => {
     delete TG.timers._s;
-    tgStep("_s", () => tgWrite(TG.settingsRef, () => ({custom: TG.custom, pinned: TG.pinned, supps: tgSupps(), dismissed: TG.dismissed}), "_s")
-      .then(ok => { if (ok && !TG.timers._s) { TG.setDirty = false; tgSaveLocal(); } }));
+    tgStep("_s", () => tgSendSettings().then(ok => { if (!ok) return; if (!TG.timers._s) TG.setDirty = false; tgSaveLocal(); }));
   }, 500);
 }
 // body() is asked again on a retry, so the second try sends the list as it is by then
@@ -6899,7 +7077,10 @@ async function tgInit() {
       // and the server returns keys in its own order, so compare content with sorted keys: comparing the
       // arrays themselves re-saved the list after every snapshot, forever
       if (stableJSON(migS) !== stableJSON(rawS)) setTimeout(tgQueueSettings, 0);
-      if (stableJSON(next) !== stableJSON({custom: TG.custom, pinned: TG.pinned, supps: TG.supps, dismissed: TG.dismissed})) { Object.assign(TG, next); tgSaveLocal(); tgNotify(); }
+      // with a change made here still to send (the editor was opened on top of one), the account's list is merged into this browser's, not laid over it
+      const mine = tgSettings(), take = TG.setDirty ? mergeSettings(tgBase() || next, mine, next) : next;
+      TG.setBase = stableJSON(next);
+      if (!sameJSON(take, mine)) { Object.assign(TG, take); tgSaveLocal(); tgNotify(); }
     };
     /* A change from another device that comes in while a supplement is open in the editor is held, not dropped
        (the list isn't swapped under the form). When the editor closes it's taken in; after a save, the
