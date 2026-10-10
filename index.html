@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-L96MVrO7ovg76qpLPttmADbH7iZBDXXo+oGnt2L4pP0=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-jg+zfNlvWt0lEkNvIJj4tvdGtlRgvOFMFb81vPWTF+Y=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -2316,6 +2316,8 @@ function handleRecord(C, a) {
    keep the totals in <WorkoutStatistics> lines inside the workout, older ones on the workout's own line: both are
    read, and the lines inside win. */
 const WK_IN_RE = /<(WorkoutStatistics|MetadataEntry)\b([^>]*)>/g;
+// where a workout's own lines stop: at its end, or (one that was never closed, in a damaged file) at the next record or workout
+const WK_END_RE = /<\/Workout>|<(?:Workout|Record)[\s>]/g;
 const toKm = (v, unit) => unit === "mi" ? v * 1.609344 : unit === "m" ? v / 1000 : unit === "yd" ? v * 0.0009144 : unit === "ft" ? v * 0.0003048 : unit === "cm" ? v / 1e5 : v;
 function handleWorkout(C, a, inner) {
   if (!WALL_RE.test(a.startDate || "") || !WALL_RE.test(a.endDate || "")) return;
@@ -2361,21 +2363,35 @@ async function parseExport(file, onProgress) {
   const reader = src.pipeThrough(new TextDecoderStream()).getReader();
   const C = makeCollector();
   const re = /<(Record|Correlation|\/Correlation|ExportDate|Workout|Me)\b([^>]*)>/g;   // \b: not <WorkoutStatistics or <MetadataEntry
-  let buf = "", inCorr = 0, lastTick = 0;
+  let buf = "", inCorr = 0, lastTick = 0, wait = null;
   for (;;) {
     const {value, done} = await reader.read();
-    if (value) buf += value;
+    if (wait) {
+      /* a workout is waiting for its end (see below). Only the new piece of the file is looked through for it, with
+         the few characters before in case the end was cut in two, and the pieces are joined once it turns up: one
+         that never ends, in a damaged file, isn't searched over again with every piece */
+      const piece = value || "", probe = wait.tail + piece;
+      wait.parts.push(piece); wait.len += piece.length; wait.tail = probe.slice(-9);
+      WK_END_RE.lastIndex = 0;
+      if (done || wait.len >= 4e6 || WK_END_RE.test(probe)) { buf = wait.parts.join(""); wait = null; }
+    } else if (value) buf += value;
     re.lastIndex = 0;
-    let m, consumed = 0, hold = -1;
-    while ((m = re.exec(buf))) {
+    let m, consumed = 0, hold = -1, held = 0;
+    while (!wait && (m = re.exec(buf))) {
       const tag = m[1];
       if (tag === "Workout") {
         /* a workout's totals are on the lines inside it, up to </Workout>. One cut off by the end of this piece of
-           the file waits for the next piece; one that never closes (a broken file) is read without them */
-        const open = !m[2].trim().endsWith("/"), end = open ? buf.indexOf("</Workout>", re.lastIndex) : -1;
-        if (open && end < 0 && !done && buf.length - m.index < 4e6) { hold = m.index; break; }
+           the file waits for the next piece. One that never closes (a damaged file) is read as far as the next
+           record or workout, and that one is then read as usual */
+        let end = -1, shut = false;
+        if (!m[2].trim().endsWith("/")) {
+          WK_END_RE.lastIndex = re.lastIndex;
+          const x = WK_END_RE.exec(buf);
+          if (x) { end = x.index; shut = x[0] === "</Workout>"; }
+          else if (!done && buf.length - m.index < 4e6) { hold = m.index; held = m[0].length; break; }
+        }
         handleWorkout(C, attrs(m[2]), end >= 0 ? buf.slice(re.lastIndex, end) : "");
-        if (end >= 0) re.lastIndex = end + 10;
+        if (shut) re.lastIndex = end + 10;
         consumed = re.lastIndex;
         continue;
       }
@@ -2394,8 +2410,8 @@ async function parseExport(file, onProgress) {
       else if (tag === "Me") { const b = attrs(m[2]).HKCharacteristicTypeIdentifierDateOfBirth; if (/^\d{4}-\d{2}-\d{2}/.test(b || "")) C.born = b.slice(0, 10); }
     }
     // keep unfinished tail (from a workout still waiting for its end, when there is one)
-    if (hold >= 0) buf = buf.slice(hold);
-    else { const lt = buf.lastIndexOf("<"); buf = lt >= consumed ? buf.slice(lt) : ""; }
+    if (hold >= 0) { buf = buf.slice(hold); wait = {parts: [buf], len: buf.length, tail: buf.slice(Math.max(held, buf.length - 9))}; }
+    else if (!wait) { const lt = buf.lastIndexOf("<"); buf = lt >= consumed ? buf.slice(lt) : ""; }
     const now = performance.now();
     if (now - lastTick > 120) { lastTick = now; onProgress && onProgress(Math.min(0.99, read / total), C.records); await new Promise(r => setTimeout(r)); }
     if (done) break;
@@ -4853,7 +4869,10 @@ function wkLate(w) {
   return null;
 }
 /* What the workouts say about each day, worked out once per draw: the days with a workout (10 minutes or more), the
-   days with a hard one, and the days whose hard one ended within 3 hours of falling asleep */
+   days with a hard one, and the days whose hard one ended within 3 hours of falling asleep.
+   first: the day "a week, average" and Recovery count from, which is the first workout with heart rate. A few
+   logged by hand years before the watch would otherwise stretch the average over those years, and date Recovery
+   from them. With no heart rate in any workout it's the first one. */
 function workoutMarks() {
   const c = S.cache || (S.cache = {}); if (c.wk) return c.wk;
   const any = new Set(), hard = new Set(), late = new Set(), list = (S.data && S.data.workouts) || [];
@@ -4864,7 +4883,8 @@ function workoutMarks() {
     hard.add(wkKey(w));
     const l = wkLate(w); if (l) late.add(l.day);
   }
-  return c.wk = {any, hard, late, first: list.length ? wkKey(list[0]) : null};
+  const from = list.find(w => w.hr > 0 || w.h) || list[0];
+  return c.wk = {any, hard, late, first: from ? wkKey(from) : null};
 }
 /* The tags the watch fills in by itself. They join "What your tags show" beside the ones you tick, and the last is
    also a chip in the check-in (same id), which stops being offered once the export has workouts. */
@@ -4884,7 +4904,7 @@ function wkRow(w) {
   const when = DOW[d.getUTCDay()] + ", " + fmtDate(i, d.getUTCFullYear() !== new Date(keyToIdx(S.data.last) * DAY).getUTCFullYear()) + " · " + fmtClock((w.s % 86400) / 60);
   const nums = [w.d >= 60 ? `<b>${fmtDur(w.d)}</b>` : `<b>${Math.round(w.d)}</b> min`,
     w.c ? `<b>${num(w.c, 0)}</b> cal` : "", w.hr ? `<b>${w.hr}</b> avg bpm` : "", w.hx ? `<b>${w.hx}</b> max` : "",
-    w.km ? `<b>${num(us ? w.km * 0.621371 : w.km, 2)}</b> ${us ? "mi" : "km"}` : "", w.fl ? `<b>${w.fl}</b> floors` : ""].filter(Boolean);
+    w.km ? `<b>${num(us ? w.km * 0.621371 : w.km, 2)}</b> ${us ? "mi" : "km"}` : "", w.fl ? `<b>${num(w.fl, 0)}</b> floor${w.fl === 1 ? "" : "s"}` : ""].filter(Boolean);
   const chips = [wkHard(w) ? `<span class="fchip">Hard</span>` : "", late ? `<span class="fchip">Ended ${late.gap < 1 ? "just" : minTxt(late.gap)} before you fell asleep</span>` : ""].filter(Boolean);
   return `<div class="wk"><div class="wk-top"><b>${esc(wkName(w))}</b><span>${when}</span></div>
     <div class="wk-nums">${nums.map(n => `<span>${n}</span>`).join("")}</div>
@@ -4906,7 +4926,8 @@ function pageWorkouts(el) {
   }
   const [x0, x1] = xRange(S.ranges.workouts), max = hrMaxNow(), mh = S.data.hrMax;
   const inR = list.filter(w => wkIdx(w) >= x0 && wkIdx(w) <= x1).reverse();   // newest first
-  const weeks = Math.max(1, (x1 - Math.max(x0, wkIdx(list[0])) + 1) / 7);
+  // "a week, average": the workouts from the first one with heart rate on (or the start of the range, if that's later), over those weeks
+  const w0 = Math.max(x0, keyToIdx(workoutMarks().first)), weeks = Math.max(1, (x1 - w0 + 1) / 7);
   const mins = inR.reduce((t, w) => t + w.d, 0), cals = inR.reduce((t, w) => t + (w.c || 0), 0);
   const zt = [0, 0, 0, 0, 0]; for (const w of inR) { const z = wkZones(w, max); if (z) z.forEach((v, q) => { zt[q] += v; }); }
   const zKey = max ? ZONES.map(([n, col], q) => { const lo = Math.round(ZONE_FROM[q] * max), hi = q < 4 ? Math.round(ZONE_FROM[q + 1] * max) : 0;
@@ -4935,7 +4956,7 @@ function pageWorkouts(el) {
   const cdef = CMP.find(c => c[0] === wkCmp), cur = F.tags.find(x => x.t.watch && x.t.id === wkCmp);
   const REC = [["sleep", "Sleep that night"], ["hrv", "HRV the next day"], ["rhr", "Resting HR the next day"]];
   const recRows = !cur ? `<p class="empty-note">No days like that in your data yet.</p>`
-    : !cur.rows.length ? `<p class="empty-note">${cur.n} day${cur.n === 1 ? "" : "s"} like that so far. It takes ${FIND_MIN} before the nights after them can be compared.</p>`
+    : !cur.rows.length ? `<p class="empty-note">${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that so far. It takes ${FIND_MIN} before the nights after them can be compared.</p>`
     : REC.map(([key, label]) => {
         const r = cur.rows.find(x => x.key === key); if (!r) return "";
         if (r.few) return `<div class="rec-row"><div class="rec-head"><b>${label}</b><span class="fchip few">Too few nights to compare</span></div></div>`;
@@ -4946,18 +4967,18 @@ function pageWorkouts(el) {
   const cut = wkAll || inR.length <= WK_SHOWN + 1 ? inR.length : WK_SHOWN;
   el.innerHTML = `<div class="page-head">${head}${rangeSeg("wkRange", S.ranges.workouts)}</div>
     <div class="panel"><div class="kv">
-      <div><span>Workouts</span><b>${inR.length}</b></div>
+      <div><span>Workouts</span><b>${num(inR.length, 0)}</b></div>
       <div><span>Time</span><b>${minTxt(mins)}</b></div>
-      <div><span>A week, average</span><b>${num(inR.length / weeks, 1)}</b></div>
+      <div><span>A week, average</span><b>${num(inR.filter(w => wkIdx(w) >= w0).length / weeks, 1)}</b></div>
       <div><span>Active calories</span><b>${num(cals, 0)}</b></div></div>
       ${zt.some(v => v > 0) ? `<h3 style="margin-top:16px">Time in each heart rate zone</h3>${zoneBar(zt)}${zoneLeg(zt)}` : ""}
     </div>
     <div class="grid two" style="margin-top:16px">
       <div>
-        <div class="panel" id="wkSess"><div class="panel-head"><h2>Sessions</h2><span class="muted" style="font-size:13px">${inR.length} in this range</span></div>
+        <div class="panel" id="wkSess"><div class="panel-head"><h2>Sessions</h2><span class="muted" style="font-size:13px">${num(inR.length, 0)} in this range</span></div>
           ${zKey ? `<div class="zleg" style="margin:6px 0 4px">${zKey}</div>` : `<p class="explain">No heart rate zones: Pulse couldn't tell your maximum heart rate from this export. Setting your date of birth in the Health app fixes that.</p>`}
           ${inR.length ? `<div class="wk-list">${inR.slice(0, cut).map(wkRow).join("")}</div>` : `<p class="empty-note">No workouts in this time range.</p>`}
-          ${inR.length > WK_SHOWN + 1 ? `<button type="button" class="linkbtn fmore" id="wkMore">${wkAll ? "Show fewer" : `Show all ${inR.length}`}</button>` : ""}
+          ${inR.length > WK_SHOWN + 1 ? `<button type="button" class="linkbtn fmore" id="wkMore">${wkAll ? "Show fewer" : `Show all ${num(inR.length, 0)}`}</button>` : ""}
         </div>
       </div>
       <div>
@@ -4969,8 +4990,8 @@ function pageWorkouts(el) {
           <div class="chart" id="wkVo2"></div>
           <p class="muted" style="font-size:13px;margin-top:8px">Apple Watch only estimates VO₂ max from outdoor walks, runs and hikes. Treadmill and stair stepper sessions still build it, and the number catches up the next time you walk or run outside.</p>
           <div class="stats wk-stats">
-            <div><span>Cardio a week, last 4 weeks</span><b>${Math.round(cardio(end - 27, end) / 4)} min</b></div>
-            <div><span>The 4 weeks before</span><b>${Math.round(cardio(end - 55, end - 28) / 4)} min</b></div>
+            <div><span>Cardio a week, last 4 weeks</span><b>${num(Math.round(cardio(end - 27, end) / 4), 0)} min</b></div>
+            <div><span>The 4 weeks before</span><b>${num(Math.round(cardio(end - 55, end - 28) / 4), 0)} min</b></div>
             ${voL ? `<div><span>VO₂ max, latest</span><b>${num(voL[1], 1)}</b></div>` : ""}
             ${voD != null ? `<div><span>VO₂ max, change in range</span><b>${voD > 0 ? "+" : voD < 0 ? "−" : ""}${num(Math.abs(voD), 1)}</b></div>` : ""}
           </div>
@@ -4979,7 +5000,7 @@ function pageWorkouts(el) {
           <div class="seg" role="group" aria-label="Which days to compare" id="wkCmp">${CMP.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === wkCmp}">${l}</button>`).join("")}</div></div>
           <p class="explain">The night after ${wkCmp === "w-day" ? "a day with a workout, against the night after a rest day" : wkCmp === "w-hard" ? "a hard workout, against the night after every other day" : "a hard workout that ended within 3 hours of falling asleep, against every other night"}. From all your data, not only this time range.</p>
           ${recRows}
-          <p class="muted" style="font-size:13px;margin-top:10px">${cur ? `${cur.n} day${cur.n === 1 ? "" : "s"} like that since ${fmtDate(keyToIdx(wkKey(list[0])), true)}. ` : ""}The same comparisons sit under <button type="button" class="linkbtn" data-tab="habits" style="font-size:inherit">What your tags show</button> on Habits.</p>
+          <p class="muted" style="font-size:13px;margin-top:10px">${cur ? `${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that since ${fmtDate(keyToIdx(workoutMarks().first), true)}. ` : ""}The same comparisons sit under <button type="button" class="linkbtn" data-tab="habits" style="font-size:inherit">What your tags show</button> on Habits.</p>
         </div>
       </div>
     </div>
@@ -4988,6 +5009,7 @@ function pageWorkouts(el) {
       <li>Heart rate zones are a share of your maximum heart rate: zone 1 is under 60%, zone 2 is 60–70%, zone 3 is 70–80%, zone 4 is 80–90%, and zone 5 is 90% and up.${mh ? ` Pulse takes your maximum as ${mh.v} bpm, ${mh.by === "age" ? "which is 220 minus your age" : "the highest your watch has recorded across several workouts"}.` : ""} The Workout app on the watch draws its zones a little differently, so its minutes may not match these exactly.</li>
       <li>The time in each zone is counted from the heart rate readings taken while the workout ran. A workout with readings for less than a third of it shows no zones.</li>
       <li>Cardio is every workout except strength, core, yoga, Pilates, stretching and cooldowns. Weeks run Monday to Sunday.</li>
+      <li>“A week, average” and Recovery count from your first workout with heart rate readings. A few workouts logged without a watch long before it still show in Sessions, but they don't stretch the average or count the time in between as rest days.</li>
       <li>A hard workout has 10 minutes or more in zones 4 and 5, or an average heart rate of 75% of your maximum or more.</li>
       <li>A hard workout that ended in the 3 hours before you fell asleep is marked on that day by itself, from the workout's end and the start of that night's sleep. That's why the check-in stops asking about it once your export has workouts. Days you ticked it yourself still count.</li>
       <li>Recovery reads the night after each day, and the next day's HRV and resting heart rate. A difference is only called out when it's bigger than your usual night-to-night swing. Otherwise it says “About the same”. Days you tagged as sick, and days around a supplement change, are left out. It shows what goes together, not what causes what.</li>
@@ -4997,7 +5019,7 @@ function pageWorkouts(el) {
     series: PARTS.map(([k, , col]) => ({pts: wks.filter(([, o]) => o[k] > 0).map(([b, o]) => [b, o[k]]), type: "bar", stack: true, every: 7, color: col})),
     yFmt: (v, d) => num(v, d),
     tip: b => { const o = wkW.get(b); if (!o) return "";
-      return `<b>Week of ${fmtDate(b, true)}</b><div>${Math.round(o.light + o.mod + o.hard + o.none)} min of cardio · ${o.n} workout${o.n === 1 ? "" : "s"}</div>` + PARTS.filter(([k]) => o[k] >= .5).map(([k, l, col]) => tipLine(l, Math.round(o[k]) + " min", col)).join(""); }});
+      return `<b>Week of ${fmtDate(b, true)}</b><div>${num(Math.round(o.light + o.mod + o.hard + o.none), 0)} min of cardio · ${o.n} workout${o.n === 1 ? "" : "s"}</div>` + PARTS.filter(([k]) => o[k] >= .5).map(([k, l, col]) => tipLine(l, num(Math.round(o[k]), 0) + " min", col)).join(""); }});
   if (vo.length) {
     const vm = new Map(vo);
     // the empty set of bars gives this chart the same side margins as the one above, so their weeks line up
@@ -8086,8 +8108,9 @@ function tagFindings() {
     tags.push(entry(t, c, c >= FIND_MIN ? rowsFor(pre, d => d.t.has(id), id !== "sick") : []));
   }
   /* The tags the watch fills in (WATCH_TAGS). For these every day counts as logged, not just the ones you checked
-     in on: each day with Health data from the first workout on is either a day with one or a day without. The same
-     days are left out as above (around a supplement change, and the ones you tagged as sick). */
+     in on: each day with Health data from the first workout with heart rate on (W.first) is either a day with one
+     or a day without. The same days are left out as above (around a supplement change, and the ones you tagged as
+     sick). */
   if (W.any.size) {
     const byHand = id => new Set(logged.filter(([, r]) => (r.t || []).includes(id)).map(([k]) => k)), sick = byHand("sick");
     const span = [];
