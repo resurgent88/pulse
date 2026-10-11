@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-K5oSw0ujg6Bx1kd+NUshbVJH+NUyBl0bcVYB6zDhdtE=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-sMDf0Jxi4spUNR6FdkKjDCOtb2S3IjzG8pOqwl5Dj4A=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -1749,6 +1749,8 @@ dialog.sheet.mv{width:min(560px,calc(100vw - 24px))}
 .progress .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
 .progress p{font-size:13px;color:var(--text-sub);margin-top:6px}
 .err{color:var(--bad);font-weight:600;margin-top:12px;font-size:14px}
+/* an upload that added nothing: a note where an error would be, in the page's own colours */
+.drop .note{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--surface-2);color:var(--text);text-wrap:pretty}
 .foot{color:var(--text-sub);font-size:12.5px;margin-top:32px;max-width:70ch}
 /* Your data. Phones: one column (upload, what's loaded, how it reads, settings). Wide: the heading, then the upload
    box and "How Pulse reads your export" on the left, and "What's loaded" and Settings on the right, each pair at its
@@ -2308,7 +2310,7 @@ function makeCollector() {
     workouts: [],   // one per <Workout>, as handleWorkout reads it
     born: null,     // the date of birth in the export, when there is one: only for the age the heart rate zones go by
     units: {},      // weight unit counts
-    records: 0, exportDate: null, firstDay: null, lastDay: null,
+    records: 0, exportDate: null, exportAt: null, firstDay: null, lastDay: null,
   };
 }
 // "2026-08-28 01:09:00 -0500": anything else is a record Pulse can't place in time, and it's skipped
@@ -2467,7 +2469,7 @@ async function parseExport(file, onProgress) {
         handleRecord(C, attrs(body));
       } else if (tag === "Correlation") { if (!m[2].trim().endsWith("/")) inCorr++; }
       else if (tag === "/Correlation") inCorr = Math.max(0, inCorr - 1);
-      else if (tag === "ExportDate") { const a = attrs(m[2]); if (a.value) C.exportDate = a.value.slice(0, 10); }
+      else if (tag === "ExportDate") { const a = attrs(m[2]); if (a.value) { C.exportDate = a.value.slice(0, 10); const at = parseWall(a.value); C.exportAt = Number.isFinite(at) ? at : null; } }
       else if (tag === "Me") { const b = attrs(m[2]).HKCharacteristicTypeIdentifierDateOfBirth; if (/^\d{4}-\d{2}-\d{2}/.test(b || "")) C.born = b.slice(0, 10); }
     }
     // keep unfinished tail (from a workout still waiting for its end, when there is one)
@@ -2672,6 +2674,7 @@ function finalize(C) {
   C.hrS = null;   // millions of readings, done with
   return {days, sleep, hrIntra: dropFuture(buildIntraday(C.hrb), cut), workouts, hrMax: maxHeartRate(workouts, C.born, C.exportDate && C.exportDate <= cut ? C.exportDate : span.last),
           exportDate: C.exportDate && C.exportDate <= cut ? C.exportDate : span.last, first: span.first, last: span.last,
+          exportAt: C.exportDate && C.exportDate <= cut ? C.exportAt : null,   // the time on the clock when it was made: tells two exports from one day apart
           records: C.records, units: kg > lb ? "metric" : "us", importedAt: new Date().toISOString()};
 }
 function round(k, v) { return Math.round(v * 1000) / 1000; }
@@ -2684,12 +2687,15 @@ function dropFuture(o, cut) {
   return out;
 }
 
-/* Adding one export to another: where both have a day, the later export (by the date it was made) wins, reading
-   by reading, and the earlier one only fills in what the later one lacks. So loading an older file after a newer
-   one never swaps a full day back for the partial one the older export caught, or moves the export date back. */
+/* Adding one export to another: where both have a day, the later export (by the date it was made, then by the time
+   when both were made the same day) wins, reading by reading, and the earlier one only fills in what the later one
+   lacks. So loading an older file after a newer one never swaps a full day back for the partial one the older export
+   caught, or moves the export date back. Data saved before the time was kept has only the date: against it, an
+   export from the same day counts as the later one, as it always did. */
 function mergeData(old, neu) {
   if (!old) return neu;
-  const neuLater = (neu.exportDate || neu.last || "") >= (old.exportDate || old.last || "");
+  const dN = neu.exportDate || neu.last || "", dO = old.exportDate || old.last || "";
+  const neuLater = dN !== dO ? dN > dO : !(neu.exportAt && old.exportAt) || neu.exportAt >= old.exportAt;
   const [under, over] = neuLater ? [old, neu] : [neu, old];
   const cut = futureCut(null);
   const days = dropFuture(under.days, cut);
@@ -2709,6 +2715,35 @@ function mergeData(old, neu) {
   }
   const workouts = under.workouts || over.workouts ? merged : undefined;
   return {...over, days, sleep, hrIntra, workouts, hrMax: over.hrMax || under.hrMax || null, first: span.first, last: span.last, records: Math.max(old.records, neu.records), importedAt: neu.importedAt};
+}
+
+/* Whether an upload left the Health data as it was: the same days, nights, workouts and heart-rate readings, whatever
+   order they were put together in. Both sides come out of mergeData, so they're trimmed alike, and the workouts and
+   the maximum heart rate are tidied the way a reload tidies them. A reading that's missing and one that's empty
+   count as the same, as they do once saved. */
+const isNone = v => v == null || (typeof v === "number" && !Number.isFinite(v));
+function sameDeep(a, b) {
+  if (isNone(a) || isNone(b)) return isNone(a) && isNone(b);
+  if (typeof a !== "object" || typeof b !== "object") return a === b;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) return a.length === b.length && a.every((v, i) => sameDeep(v, b[i]));
+  for (const k in a) if (!sameDeep(a[k], b[k])) return false;
+  for (const k in b) if (!(k in a) && !isNone(b[k])) return false;
+  return true;
+}
+function sameData(a, b) {
+  const cut = futureCut(null);
+  return ["days", "sleep", "hrIntra", "exportDate", "first", "last"].every(k => sameDeep(a[k], b[k]))
+    && sameDeep(tidyWorkouts(a.workouts, cut), tidyWorkouts(b.workouts, cut)) && sameDeep(tidyMax(a.hrMax), tidyMax(b.hrMax));
+}
+/* What's said when an upload adds nothing: the export is older than one already loaded, or it holds what's here
+   already. Either way the way to newer days is a new export. */
+function sameNote(prev, parsed) {
+  const made = k => fmtDate(keyToIdx(k), true), a = parsed.exportDate, b = prev.exportDate;
+  const why = a && b && a < b ? `This export was made on ${made(a)}, and Pulse already has a newer one, from ${made(b)}.`
+    : a && a === b && parsed.exportAt && prev.exportAt && parsed.exportAt < prev.exportAt ? `This export was made earlier on ${made(a)} than the one Pulse already has.`
+    : `Everything in this export is already here, up to ${made(prev.last)}.`;
+  return `<b>Nothing changed since your last upload.</b> ${why} For newer days, make a new export in the Health app and upload that.`;
 }
 
 /* ============================================================
@@ -3657,10 +3692,19 @@ function saveWarnSoon() {
 }
 /* A file that couldn't be read is said beside the file picker. When the page has been changed since (the import
    was left running and another tab opened), there's no file picker on screen: it's said in a line above the page
-   instead, and beside the picker the next time that's opened. */
-let importErr = "";
-const importWarnHTML = () => importErr && S.tab !== "data" ? `<div class="banner" id="impWarn"><span><b>That file wasn't loaded.</b> ${esc(importErr)}</span><button class="btn" id="impGo" type="button">Try again</button></div>` : "";
+   instead, and beside the picker the next time that's opened. An export that added nothing is said the same two
+   ways (importSame), as a note rather than an error. */
+let importErr = "", importSame = "";
+const importWarnHTML = () => S.tab === "data" ? "" : importErr ? `<div class="banner" id="impWarn"><span><b>That file wasn't loaded.</b> ${esc(importErr)}</span><button class="btn" id="impGo" type="button">Try again</button></div>`
+  : importSame ? `<div class="banner" id="impWarn"><span>${importSame}</span><button class="btn" id="impGo" type="button">Upload another</button></div>` : "";
 const bindImportWarn = () => { const b = $("#impGo"); if (b) b.onclick = () => { S.tab = "data"; render(); window.scrollTo({top: 0}); }; };
+// an upload that added nothing: beside the picker when it's on screen, otherwise in the line above the page
+function showImportSame(html) {
+  const pg = $("#prog"), note = $("#impNote");
+  if (pg) pg.hidden = true;
+  if (note) { note.innerHTML = html; note.hidden = false; }
+  else { importSame = html; showImportWarn(); }
+}
 function showImportWarn() {
   $("#impWarn")?.remove();
   const page = $("#page"), html = importWarnHTML(); if (!page || !html) return;
@@ -3761,6 +3805,8 @@ function renderWelcome() {
 function dropZone() {
   // a file that couldn't be read while no file picker was on screen: said here, once
   const failed = importErr; importErr = "";
+  // ...and the same for an upload that added nothing
+  const same = importSame; importSame = "";
   return `<div class="drop" id="drop">
     <svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="10" stroke="currentColor" stroke-width="2"/><path d="M20 27V13M14 19l6-6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <h3>Drop your export.zip here</h3>
@@ -3771,6 +3817,7 @@ function dropZone() {
     </div>
     <div class="progress" id="prog" hidden><div class="bar"><i></i></div><p></p></div>
     <p class="err" id="err"${failed ? "" : " hidden"}>${esc(failed)}</p>
+    <p class="note" id="impNote" role="status"${same ? "" : " hidden"}>${same}</p>
     <div class="private"><svg viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.6"/></svg><span>Your Health file never leaves your device. It's read inside this browser tab, and the results are saved only in this browser. ${HOST ? "Your supplement list, its check-offs, your tags and your settings are the only things that can leave it, and only once you sign in to a Pulse account: they then sync to that account, where only you can read them. Signed out, they stay in this browser too." : "Your supplement list, its check-offs, your tags and your settings are the only things that can leave it: they sync to a private space in your Claude account that only you can see, or, where your account can't sync, they stay in this browser too."}</span></div>
     ${HOST && !S.data ? HOST.welcomeHTML() : ""}
   </div>`;
@@ -3787,14 +3834,16 @@ function bindDrop() {
 async function importFile(file) {
   const prog = $("#prog"), bar = prog.querySelector("i"), msg = prog.querySelector("p"), err = $("#err");
   err.hidden = true; prog.hidden = false; $("#pick").disabled = true;
-  importErr = ""; $("#impWarn")?.remove();
+  importErr = importSame = ""; $("#impWarn")?.remove(); { const n = $("#impNote"); if (n) n.hidden = true; }
   try {
     const parsed = await parseExport(file, (f, n) => { bar.style.width = (f * 100).toFixed(1) + "%"; msg.textContent = `Reading… ${Math.round(f * 100)}% · ${n.toLocaleString()} records`; });
     msg.textContent = "Crunching the numbers…";
     await new Promise(r => setTimeout(r, 30));
-    const prev = S.sample ? null : S.data;
+    const prev = S.sample ? null : S.data, next = mergeData(prev, parsed);
+    // nothing in the file that wasn't here already (an old export, or the same one again): said, and everything is left as it is
+    if (prev && sameData(mergeData(prev, prev), next)) { showImportSame(sameNote(prev, parsed)); return; }
     exitSample();
-    S.data = mergeData(prev, parsed); toLatest();
+    S.data = next; toLatest();
     // a first import reads its units from the file, unless your account already has them set
     if (!prev) { if (TG.prefs && TG.prefs.units) S.units = TG.prefs.units; else { S.units = parsed.units; savePrefs({units: S.units}); } }
     saveData(); S.tab = "summary"; render(); window.scrollTo({top: 0});
