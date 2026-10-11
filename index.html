@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-b7CptEKrACF2f3Tj0hO04jyDwU3VniZQNuGF3QDnX+Y=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-K5oSw0ujg6Bx1kd+NUshbVJH+NUyBl0bcVYB6zDhdtE=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -8365,9 +8365,7 @@ function cardFindings(key, F) {
    order a day goes, two sections at a time with Next sliding on to the next two (Back and Next sit above the
    sections, so they stay put whatever a page's length), then how the day felt, then Done. It reads and writes the
    same tags as everything else, so days tagged before it came along show up filled in. Done marks the day fully
-   logged: whatever isn't ticked didn't happen. Days without it count only the tags that are set. The supplements taken
-   that day have a card of their own under it: the day's totals by ingredient, then each one with the times it was
-   ticked. */
+   logged: whatever isn't ticked didn't happen. Days without it count only the tags that are set. */
 /* How the day felt: five buttons each, 1 to 5, worst on the left to best on the right, in red to green as the arrows on
    Summary. Stress runs the other way from how it's saved (a stress level, 5 = very stressed): its 1 is very stressed and
    its 5 calm, so the greens line up. Tapping the chosen one again clears it */
@@ -8377,7 +8375,7 @@ const CI_PER_PAGE = 2;   // sections on each page of the check-in
 const CHG_SHOWN = 3;     // supplement changes listed on a day before "N more changes" (adding a whole list at once makes dozens)
 // "Wed, Sep 23": the date the check-in is for
 const ciDate = k => { const i = keyToIdx(k); return DOW[new Date(i * DAY).getUTCDay()] + ", " + fmtDate(i); };
-function checkIn(el, suppEl) {
+function checkIn(el) {
   const st = {rangeFor: null, page: 0, day: null, jumpTo: null};
   const head = (title, k) => `<div class="panel-head"><h2>${title}</h2><span class="date">${ciDate(k)}</span></div>`;
   // the pager's window is as tall as the page showing, so a short page leaves no gap under it
@@ -8469,7 +8467,7 @@ function checkIn(el, suppEl) {
     const k = S.habitDay, r = dayRec(k);
     if (tagsPending()) {
       const wait = t => `${head(t, k)}<p class="empty-note">Checking your ${ACCT}…</p>`;
-      el.innerHTML = wait("Check-in"); suppEl.innerHTML = wait("Supplements taken"); return;
+      el.innerHTML = wait("Check-in"); return;
     }
     drawTags(k, r);
     const feel = CI_FEEL.map(([key, label, lo, hi, dir]) => {
@@ -8481,17 +8479,6 @@ function checkIn(el, suppEl) {
         <span class="ci-scale"><span>${lo}</span><span>${hi}</span></span></div>`;
     }).join("");
     el.querySelector(".ci-feelsec").innerHTML = `<h3 class="ci-h">How you felt</h3>${feel}<p class="muted" style="font-size:12.5px;margin-top:10px">Tap a number again to clear it.</p>`;
-    // that day's supplements, as logged: any change first (started, stopped, a new dose), then how many, and the time of each tap
-    const evs = suppEvents()[k] || [], cutE = st.allChg === k || evs.length <= CHG_SHOWN + 1 ? evs.length : CHG_SHOWN;
-    const changes = evs.slice(0, cutE).map(e => `<p class="ci-chg">${esc(suppEventText(e))}${e.type === "dose" ? `<span class="muted">${esc(doseDiff(e.c))}</span>` : ""}</p>`).join("")
-      + (cutE < evs.length ? `<button type="button" class="linkbtn ci-more-chg" style="font-size:13px;margin:0 0 8px">${evs.length - cutE} more change${evs.length - cutE === 1 ? "" : "s"}</button>` : "");
-    const suppRows = supps().filter(s => r.s.includes(s.id)).map(s => {
-      const n = r.n[s.id], form = r.x[s.id] ? r.x[s.id].f : recipeOf(s).form, times = (r.tm[s.id] || []).map(fmtClock);
-      return `<div class="ci-supp"><span class="ci-sname">${esc(s.name)}</span><span class="muted">${n != null ? amtHTML(`${fmtUnits(n)} ${pluralForm(form, n)}`) : "logged"}${times.length ? " · " + amtHTML(times.join(", ")) : ""}</span></div>`;
-    }).join("");
-    suppEl.innerHTML = `${head("Supplements taken", k)}<div style="margin-top:10px">${changes}${totalsHTML(k)}
-      <div class="ci-takenlist">${suppRows || `<p class="muted" style="font-size:13.5px">None logged that day.</p>`}</div></div>
-      <p class="muted" style="font-size:12.5px;margin-top:8px">Logged when you tick them in the day's supplements, with the time of each tick.</p>`;
   };
   const save = fn => { const k = S.habitDay, r = dayRec(k); setDayRec(k, fn(r)); };
   const setFeel = (key, v) => save(r => { const f = {...r.f}; if (v == null) delete f[key]; else f[key] = v; return {...r, f}; });
@@ -8508,7 +8495,6 @@ function checkIn(el, suppEl) {
     if (t.closest(".ci-addbtn")) add();
   });
   // a number: picked, or, if it was already the one picked, cleared
-  suppEl.addEventListener("click", e => { if (e.target.closest(".ci-more-chg")) { st.allChg = S.habitDay; draw(); } });
   el.addEventListener("click", e => {
     const fv = e.target.closest("[data-feel-set]"); if (!fv) return;
     const key = fv.dataset.feelSet, n = +fv.dataset.v;
@@ -8564,7 +8550,6 @@ function pageHabits(el) {
       <div>
         <div class="panel" id="hbCal" data-grow-from=".5"></div>
         <div class="panel ci" id="hbCheck"></div>
-        <div class="panel" id="hbTaken"></div>
         <div class="panel" id="hbCounts"></div>
       </div>
     </div>`;
@@ -8579,7 +8564,7 @@ function pageHabits(el) {
   let editFromDay = null;
   const tb = tagBrowser(el.querySelector(".hb-browser"), () => S.habitDay, null, {cat: "all", editSupp: id => editFromDay && editFromDay(id), notes: true, only: "supp"});
   // the day's check-in, in its own card under the calendar
-  const ci = checkIn(el.querySelector("#hbCheck"), el.querySelector("#hbTaken"));
+  const ci = checkIn(el.querySelector("#hbCheck"));
   const go = k => { if (k > todayKey()) k = todayKey(); if (k === S.habitDay) { head(); return; } S.habitDay = k; swapPanel(el.querySelector("#hbDay"), ".hb-back button", k !== todayKey(), () => { head(); tb.redraw(); }); morphHeight(el.querySelector("#hbCheck"), ci.redraw); drawCal(); };
   el.querySelector(".hb-prev").onclick = () => go(keyAdd(S.habitDay, -1));
   el.querySelector(".hb-next").onclick = () => go(keyAdd(S.habitDay, 1));
