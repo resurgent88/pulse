@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-/9VgRMAuPPeZjNr36GgRKKZArwfoyIptFEmQlyO/giA=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-b7CptEKrACF2f3Tj0hO04jyDwU3VniZQNuGF3QDnX+Y=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -3599,7 +3599,7 @@ document.addEventListener("cancel", e => {
   const d = e.target; if (!(d instanceof HTMLDialogElement) || !d.classList.contains("sheet")) return;
   e.preventDefault(); if (!d.dataset.ownCancel) d.close();
 }, true);
-const TABS = [["summary", "Summary"], ["stress", "Stress"], ["sleep", "Sleep"], ["heart", "Health Check"], ["workouts", "Workouts"], ["habits", "Habits"], ["body", "Body"], ["trends", "Trends"], ["data", "Your data"]];
+const TABS = [["summary", "Summary"], ["stress", "Stress"], ["sleep", "Sleep"], ["heart", "Health Check"], ["habits", "Habits"], ["workouts", "Workouts"], ["body", "Body"], ["trends", "Trends"], ["data", "Your data"]];
 function rangeSeg(id, cur, opts = [[30, "30 days"], [90, "90 days"], [365, "1 year"], [0, "All"]], label = "Time range") {
   return `<div class="seg" role="group" aria-label="${label}" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === cur}">${l}</button>`).join("")}</div>`;
 }
