@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-jg+zfNlvWt0lEkNvIJj4tvdGtlRgvOFMFb81vPWTF+Y=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-/9VgRMAuPPeZjNr36GgRKKZArwfoyIptFEmQlyO/giA=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -509,7 +509,12 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
   --text:#122220; --text-sub:#4c615d; --ink-3:#7b8f8b;
   --accent:#0c8277; --accent-ink:#ffffff; --accent-soft:#d6efeb;
   --sleep:#6a5acd; --heart:#d4474a; --act:#0d8a7e; --body:#c27a12; --deep:#3b2f9e; --core:#7d6fe0; --rem:#4fa6e8; --awake:#e39a4c;
-  --good:#107a37; --good-soft:#dcf1e2; --ok:#39726c; --ok-soft:#e1eeec; --warn:#945a00; --warn-soft:#fbecd0; --bad:#b83232; --bad-soft:#f8dddd;
+  --good:#107a37; --good-soft:#dcf1e2; --ok:#2c5ea8; --ok-soft:#e3ebf9; --warn:#945a00; --warn-soft:#fbecd0; --bad:#b83232; --bad-soft:#f8dddd;
+  /* The stress levels as filled marks (the 30-day strip, the gauge, a card's dot, the bars under it): one fixed set, the
+     same in every theme, so a level looks the same wherever it's seen. Picked to stay apart from one another, for
+     colour-blind eyes too, and from every theme's cards. Words in a level's colour keep --good, --ok, --warn and
+     --bad, which each theme steps for its own cards. */
+  --lv-low:#3aa273; --lv-normal:#5893f6; --lv-elevated:#d37e01; --lv-high:#d42229;
   --shadow:0 1px 2px rgba(18,34,32,.06),0 4px 16px rgba(18,34,32,.05);
   /* Type: Lexend for words, JetBrains Mono for numbers (stat values, axes, tooltips, counts, amounts) */
   --font-text:"Lexend",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -536,7 +541,7 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
    dark theme gets the same dark ramp. The JS sets data-scheme alongside data-theme. */
 :root[data-scheme="dark"]{
   --sleep:#9a8cf0; --heart:#ef6b6b; --act:#36c2b2; --body:#e3a23f; --deep:#6b5ce0; --core:#9d92f2; --rem:#64b7f0; --awake:#eaa45e;
-  --good:#4cc46f; --good-soft:#123522; --ok:#8fc4bd; --ok-soft:#1a2f2c; --warn:#f0b54a; --warn-soft:#3a2c10; --bad:#f38080; --bad-soft:#3d1a1a;
+  --good:#4cc46f; --good-soft:#123522; --ok:#9dbdf7; --ok-soft:#1b2942; --warn:#f0b54a; --warn-soft:#3a2c10; --bad:#f38080; --bad-soft:#3d1a1a;
 }
 /* Themes, sampled from Monkeytype. --title is a second colour from the theme, for headings */
 :root[data-theme="soaring-skies"]{
@@ -573,7 +578,7 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
   --text:#17173a; --text-sub:#3c3f70; --ink-3:#5c5f93;
   --accent:#3a37bd; --accent-ink:#ffffff; --accent-soft:#c9caff;
   /* taro's lavender cards are darker than the other light themes, so its status text goes a step darker */
-  --good:#0b5e2a; --ok:#2a5a55; --warn:#744400; --bad:#9c2424;
+  --good:#0b5e2a; --ok:#274d8f; --warn:#744400; --bad:#9c2424;
   --shadow:0 1px 2px rgba(23,23,58,.10),0 4px 16px rgba(23,23,58,.08); color-scheme:light;
 }
 :root[data-theme="dracula"]{
@@ -1472,29 +1477,85 @@ dialog.sheet.ask{width:min(420px,calc(100vw - 32px));height:fit-content;max-heig
 .fchip.ftag small{font-weight:500;font-size:12px;color:var(--text-sub);margin-left:2px}
 .fmore{margin-top:8px;font-size:13px}
 .fextra{display:flex;flex-direction:column}
-/* workouts: one row per session (what it was and when, its numbers, the time in each heart rate zone) */
-.wk-list{display:flex;flex-direction:column}
-.wk{padding:12px 0;border-top:1px solid var(--grid)}
-.wk-list > .wk:first-child{border-top:0;padding-top:4px}
-.wk-top{display:flex;justify-content:space-between;align-items:baseline;gap:2px 12px;flex-wrap:wrap}
-.wk-top b{font-weight:600;font-size:15px}
-.wk-top span{font-size:13px;color:var(--text-sub)}
-.wk-nums{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:4px;font-size:13.5px;color:var(--text-sub)}
-.wk-nums b{font-family:var(--font-num);font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);font-size:15px}
-.wk .stagebar{height:10px;border-radius:5px;margin:8px 0 6px}
-.wk .fchips{margin-top:8px}
+/* ---- workouts ---- */
+/* the week and the workout sit side by side on a wide screen, each only as tall as what's in it */
+.wk-two{align-items:start}
+#wkWeek,#wkDay{scroll-margin-top:110px}
+/* a week: the total and how it compares, one column a day, Monday to Sunday, then its workouts. A day with a
+   workout, and each workout under it, is a button that opens it in the card beside */
+.wkw-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 12px;margin-top:6px}
+.wkw-n{font-family:var(--font-num);font-weight:700;font-variant-numeric:tabular-nums;font-size:28px;line-height:1.15}
+.wkw-top span{font-size:13.5px;color:var(--text-sub)}
+.wkw-vs{font-size:13.5px;color:var(--text-sub);margin-top:3px}
+.wkw-vs b{font-family:var(--font-num);font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
+.wkweek{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:14px 0 6px}
+.wkd{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;border:0;background:none;padding:6px 0 4px;border-radius:10px;color:var(--text)}
+.wkd:disabled{cursor:default}
+.wkd:not(:disabled):hover{background:var(--surface-2)}
+/* the day's minutes, stacked from the bottom by how hard they were, in a slot every day has */
+.wkd-bar{display:flex;flex-direction:column-reverse;gap:2px;width:22px;height:64px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.wkd:not(:disabled):hover .wkd-bar{background:var(--line)}
+.wkd-bar i{display:block;flex:0 1 auto;width:100%;min-height:3px;border-radius:3px}
+.wkd-l{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:600;color:var(--text-sub)}
+.wkd:not(:disabled) .wkd-l{color:var(--text)}
+.wkd.now .wkd-l{background:var(--text);color:var(--ground)}
+.wkd-m{font-size:11.5px;line-height:1;color:var(--text-sub)}
+.wkd.sel .wkd-bar{outline:2px solid var(--text);outline-offset:2px}
+.wkd.fut{opacity:.45}
+/* the week's workouts: the day, what it was and when, how long */
+.wk-list{display:flex;flex-direction:column;margin-top:14px;padding-top:6px;border-top:1px solid var(--line)}
+.wkr{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:0 10px;margin:0 -10px;padding:8px 10px;border:0;border-radius:10px;background:none;color:var(--text);text-align:left}
+.wkr:hover{background:var(--surface-2)}
+.wkr.sel{background:var(--accent-soft)}
+.wkr.sel .wkr-d,.wkr.sel .wkr-s{color:var(--text)}
+.wkr-d{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-sub)}
+.wkr-m{display:flex;flex-direction:column;min-width:0}
+.wkr-n{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px;min-width:0}
+.wkr-n b{font-weight:600;font-size:14.5px;min-width:0;overflow-wrap:anywhere}
+.wkr-tag{flex:none;font-style:normal;font-size:11.5px;font-weight:600;line-height:1.4;padding:0 6px;border-radius:6px;background:var(--surface-2);color:var(--text)}
+.wkr:hover .wkr-tag,.wkr.sel .wkr-tag{background:var(--surface)}
+.wkr-s{font-size:12.5px;color:var(--text-sub)}
+.wkr-t{font-weight:700;font-size:14.5px;white-space:nowrap}
+/* one workout: its name and what kind of effort it was, its figures, then its zones as a ladder, hardest at the top */
+.wk-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:10px 0 12px}
+.wk-title b{font-size:22px;font-weight:700;line-height:1.2;letter-spacing:-.01em;color:var(--title,var(--text))}
+.wk-kv b small{font-family:var(--font-text);font-size:12.5px;font-weight:500;color:var(--text-sub);margin-left:3px}
+.zhead{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:2px 10px;margin:18px 0 10px}
+.zhead span{font-size:12.5px;color:var(--text-sub)}
+.zrows{display:grid;grid-template-columns:auto auto minmax(32px,1fr) auto;align-items:center;gap:9px 10px;font-size:13.5px}
+.zn{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.zn i{width:9px;height:9px;border-radius:3px;flex:none}
+.zr{font-size:12.5px;color:var(--text-sub);white-space:nowrap}
+.zb{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.zb i{display:block;height:100%;border-radius:4px}
+.zrows b{font-weight:500;text-align:right;white-space:nowrap}
 .zleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--text-sub)}
 .zleg span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .zleg i{width:9px;height:9px;border-radius:3px;flex:none}
 .zleg b{font-family:var(--font-num);font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
-/* recovery: a reading, how it differs, and the two averages side by side */
-.rec-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;padding:12px 0;border-top:1px solid var(--grid)}
+/* your training: four totals (two by two on a phone, in a row on a wide screen), then the two charts side by side
+   where there's room for both */
+#wkTrain .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:760px){#wkTrain .kv{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.wk-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:22px 28px;margin-top:20px}
+.wk-charts > div{min-width:0}
+.wk-charts .explain{margin:2px 0 8px}
+.wk-note{font-size:13px;color:var(--text-sub);margin-top:10px;max-width:62ch}
+.wk-note b{font-family:var(--font-num);font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
+/* recovery, folded away under its title until it's asked for: a reading, how it differs, then the two averages as
+   bars one above the other */
+.wk-sub{font-size:13px;font-weight:400;color:var(--text-sub);margin-top:1px}
+#wkRecBody{max-width:640px;padding-top:14px}
+#wkRecBody .explain{margin:10px 0 2px}
+.rec-row{display:grid;grid-template-columns:minmax(0,auto) minmax(32px,1fr) auto;align-items:center;gap:7px 12px;padding:12px 0;border-top:1px solid var(--grid)}
 .rec-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:6px 10px;flex-wrap:wrap}
 .rec-head b{font-weight:600}
-.rec-v span{display:block}
-.rec-v b{font-family:var(--font-num);font-weight:700;font-variant-numeric:tabular-nums;font-size:18px}
-/* the figures under the weekly chart sit on one line, however many lines the label above each takes */
-.wk-stats div{justify-content:flex-end}
+.rec-v{display:contents}
+.rec-l{font-size:13px;color:var(--text-sub)}
+.rec-v b{font-family:var(--font-num);font-weight:700;font-variant-numeric:tabular-nums;font-size:15px;text-align:right;white-space:nowrap}
+.rec-v .cbar{height:8px;border-radius:4px}
+.rec-v .cbar i{border-radius:4px;background:var(--act)}
+.rec-v.alt .cbar i{background:var(--ink-3)}
 /* a chip the watch filled in: it's on, and it isn't a button */
 .chip.seen{background:var(--accent-soft);border-color:var(--accent);color:var(--text);cursor:default}
 .fchip{font-size:13px;padding:4px 9px;border-radius:8px;background:var(--surface-2);color:var(--text)}
@@ -2029,7 +2090,7 @@ const S = {
 const STORE_KEY = STORE_KEY_EARLY;
 /* Every day card back on its latest day, and Habits back on today: after a reload, a new upload, opening or closing the
    sample, or coming back to a page the browser kept from before. A day picked by hand only lasts while you're looking. */
-function toLatest() { S.heartSel = S.sleepSel = S.stressSel = null; S.habitDay = null; S.calMonth = null; }
+function toLatest() { S.heartSel = S.sleepSel = S.stressSel = S.wkSel = S.wkWeek = null; S.habitDay = null; S.calMonth = null; }
 /* A failed save (the browser's storage full, most often after a big import) is said out loud: the data is on
    screen now but won't survive a reload, and quietly losing it on the next visit is worse than a warning. */
 function saveData() {
@@ -2753,11 +2814,12 @@ function stressWhy(st) {
   return lead + drivers.map(bit).join(" and ") + ".";
 }
 function levelOf(s) { return s < 35 ? "low" : s < 60 ? "normal" : s < 75 ? "elevated" : "high"; }
+// var: the level's colour for words, stepped by each theme; fill: its colour as a filled mark, the same in every theme
 const LEVEL = {
-  low: {label: "Low", var: "--good", line: "Your body looks well rested today."},
-  normal: {label: "Normal", var: "--ok", line: "Your body looks about normal for you today."},
-  elevated: {label: "Elevated", var: "--warn", line: "Your body is showing some signs of strain today."},
-  high: {label: "High", var: "--bad", line: "Your body is showing clear signs of strain today."},
+  low: {label: "Low", var: "--good", fill: "--lv-low", line: "Your body looks well rested today."},
+  normal: {label: "Normal", var: "--ok", fill: "--lv-normal", line: "Your body looks about normal for you today."},
+  elevated: {label: "Elevated", var: "--warn", fill: "--lv-elevated", line: "Your body is showing some signs of strain today."},
+  high: {label: "High", var: "--bad", fill: "--lv-high", line: "Your body is showing clear signs of strain today."},
 };
 const LEVEL_ICON = {
   low: '<svg viewBox="0 0 12 12"><path d="M2.5 6.5l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -3058,12 +3120,12 @@ function originFrom(d) {
 }
 /* A press gives a little under the finger and springs back on release. It animates `scale`, which sits apart from
    `transform`, so it never fights a card's own flip or slide. Big things give less than small ones. */
-const PRESS_SEL = ".btn, .chip, .fv, button.card, button.mtile, .iconbtn, .ci-dot, .log-nudge, .cal button, .tbtn, .seg button, .tab";
+const PRESS_SEL = ".btn, .chip, .fv, button.card, button.mtile, .iconbtn, .ci-dot, .log-nudge, .cal button, .tbtn, .seg button, .tab, .wkr, .wkd";
 document.addEventListener("pointerdown", e => {
   if (e.button || reduceMotion()) return;
   let el = e.target.closest(PRESS_SEL); if (!el || el.disabled || el.closest(".arranging") || !el.animate) return;
   if (el.classList.contains("tbtn")) el = el.querySelector(".box") || el;   // a supplement row: its checkbox gives
-  const s = el.matches("button.card, button.mtile, .log-nudge") ? ".98" : ".94";
+  const s = el.matches("button.card, button.mtile, .log-nudge, .wkr") ? ".98" : ".94";
   const a = el.animate([{scale: "1"}, {scale: s}], {duration: 110, easing: "ease-out", fill: "forwards"});
   const up = () => {
     removeEventListener("pointerup", up, true); removeEventListener("pointercancel", up, true);
@@ -3141,8 +3203,14 @@ let QUIET = false;
 function redrawQuietly(fn) {
   const a = document.activeElement, seg = a && a.closest && a.closest(".seg[id]");
   const again = seg ? `#${CSS.escape(seg.id)} ${attrSel("data-v", a.dataset.v || "")}` : a && a.id ? "#" + CSS.escape(a.id) : null;
+  /* The page keeps its height while it's drawn again, and ends at the scroll position it started from. Emptied for a
+     moment it would be shorter than the screen is scrolled, and a browser that doesn't hold its place by itself
+     (Safari) would jump up the page and stay there. */
+  const root = document.documentElement, y = window.scrollY, room = root.style.minHeight;
+  root.style.minHeight = root.scrollHeight + "px";
   QUIET = true;
-  try { fn(); } finally { QUIET = false; }
+  try { fn(); } finally { QUIET = false; root.style.minHeight = room; }
+  if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
   if (again) document.querySelector(again)?.focus({preventScroll: true});
 }
 /* opts.dir: moving to another day, -1 into the past and +1 back towards today. The card then swipes instead of
@@ -3552,10 +3620,10 @@ function tipLine(label, v, color) { return `<div>${color ? `<i style="display:in
    Render
    ============================================================ */
 /* The top card(s) on each tab that grow in when you arrive on it. Stress and Sleep already do it through
-   their day cards (swapPanel); Summary is left as it is. */
+   their day cards (swapPanel), and so does Workouts; Summary is left as it is. */
 let lastTab = null;
 const firstPanel = () => [document.querySelector("#page .panel")];
-const TAB_GROW = {heart: firstPanel, workouts: firstPanel, habits: () => [$("#hbDay"), $("#hbCal")], body: firstPanel, trends: firstPanel, data: () => [document.querySelector("#page .dl-loaded")]};
+const TAB_GROW = {heart: firstPanel, habits: () => [$("#hbDay"), $("#hbCal")], body: firstPanel, trends: firstPanel, data: () => [document.querySelector("#page .dl-loaded")]};
 /* How old the export is, in days (0 = it reaches today). From a week on, every tab says so and offers an upload,
    and nothing speaks of "today" or "tonight" from it */
 const dataAge = () => S.data && !S.sample ? keyToIdx(todayKey()) - keyToIdx(S.data.last) : 0;
@@ -3634,7 +3702,7 @@ function render() {
     if (page.animate) page.animate(reduceMotion() ? [{opacity: 0}, {opacity: 1}] : [{opacity: 0, transform: `translateX(${dir * 28}px)`}, {opacity: 1, transform: "none"}],
       {duration: reduceMotion() ? 150 : 260, easing: "cubic-bezier(.2,.8,.2,1)"});
   }
-  if (S.tab !== lastTab) countIn($("#page"), ".card .val, svg.gauge text.num, .mtile > b");
+  if (S.tab !== lastTab) countIn($("#page"), ".card .val, svg.gauge text.num, .mtile > b, .wkw-n");
   lastTab = S.tab;
   if (!S.sample) try { localStorage.setItem(STORE_KEY + "-tab", S.tab); } catch (e) {}
 }
@@ -3799,7 +3867,7 @@ function pageSummary(el) {
   const last = keyToIdx(S.data.last);
   const st = S.stress[S.stress.length - 1];
   const stressCard = st ? `<button class="card" type="button" data-tab="stress">
-      <span class="label"><i style="background:var(${LEVEL[st.level].var})"></i>Stress</span>
+      <span class="label"><i style="background:var(${LEVEL[st.level].fill})"></i>Stress</span>
       <span class="val num">${st.score}<small>/ 100</small></span>
       <span>${pill(st.level)}</span>
       <span class="vs lead-line">${st.i >= last - 1 && dataFresh() ? LEVEL[st.level].line : LEVEL[st.level].line.replace("today", "that day")}</span>
@@ -4109,14 +4177,14 @@ function pageStress(el) {
     const diffTxt = stressDiffText(p);
     return `<div class="driver">
       <div class="what"><b>${p.name}</b><span>${diffTxt}</span></div>
-      <div class="dbar" aria-hidden="true"><i style="background:var(${col});${pos >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></i></div>
+      <div class="dbar" aria-hidden="true"><i style="background:var(${col === "--warn" ? "--lv-elevated" : col === "--good" ? "--lv-low" : col});${pos >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></i></div>
       <span class="effect" style="color:var(${col === "--ink-3" ? "--text-sub" : col})">${eff}</span>
     </div>`;
   }).join("");
   const last30 = []; const byI = new Map(st.map(s => [s.i, s]));
   const endI = t.i;
   // each day is a button that opens it in the gauge above; days with no score can't be opened
-  for (let i = endI - 29; i <= endI; i++) last30.push(byI.get(i) ? `<button type="button" data-si="${i}" title="${fmtDate(i)}: ${LEVEL[byI.get(i).level].label} (${byI.get(i).score})" aria-label="${fmtDateLong(i)}: ${LEVEL[byI.get(i).level].label}, ${byI.get(i).score}" style="background:var(${LEVEL[byI.get(i).level].var})"></button>` : `<button type="button" class="none" disabled title="${fmtDate(i)}: no data" aria-label="${fmtDateLong(i)}: no data"></button>`);
+  for (let i = endI - 29; i <= endI; i++) last30.push(byI.get(i) ? `<button type="button" data-si="${i}" title="${fmtDate(i)}: ${LEVEL[byI.get(i).level].label} (${byI.get(i).score})" aria-label="${fmtDateLong(i)}: ${LEVEL[byI.get(i).level].label}, ${byI.get(i).score}" style="background:var(${LEVEL[byI.get(i).level].fill})"></button>` : `<button type="button" class="none" disabled title="${fmtDate(i)}: no data" aria-label="${fmtDateLong(i)}: no data"></button>`);
   const counts = {low: 0, normal: 0, elevated: 0, high: 0};
   st.filter(s => s.i > endI - 30).forEach(s => counts[s.level]++);
   el.innerHTML = `
@@ -4126,7 +4194,7 @@ function pageStress(el) {
     <div class="panel">
       <div class="panel-head"><h2>Last 30 days</h2><span style="color:var(--text-sub);font-size:14px">${counts.low} low · ${counts.normal} normal · ${counts.elevated} elevated · ${counts.high} high</span></div>
       <div class="strip" id="stressStrip" style="margin-top:12px">${last30.join("")}</div>
-      <div class="strip-scale">${["low", "normal", "elevated", "high"].map(l => `<span><i style="background:var(${LEVEL[l].var})"></i>${LEVEL[l].label}</span>`).join("")}<span><i style="background:var(--surface-2)"></i>No data</span></div>
+      <div class="strip-scale">${["low", "normal", "elevated", "high"].map(l => `<span><i style="background:var(${LEVEL[l].fill})"></i>${LEVEL[l].label}</span>`).join("")}<span><i style="background:var(--surface-2)"></i>No data</span></div>
     </div>
     <div class="panel">
       <details class="more" id="stressMore"${stressChartOpen ? " open" : ""}><summary>${CHEV_R}<h2>Full history</h2><span class="more-hint more-show">Show chart</span><span class="more-hint more-hide">Hide chart</span></summary>
@@ -4153,7 +4221,7 @@ function pageStress(el) {
     if (!more.open) return;   // folded away: drawn when it opens, at its real width
     const x = xRange(S.ranges.stress), s = series("stress"), sel = S.stressSel;
     chart($("#stressChart"), {x, height: 230, yMin: 0, yMax: 100, label: "Stress score over time", selected: sel,
-      bands: [{y0: 0, y1: 35, color: "--good"}, {y0: 60, y1: 75, color: "--warn"}, {y0: 75, y1: 100, color: "--bad"}],
+      bands: [{y0: 0, y1: 35, color: "--lv-low"}, {y0: 60, y1: 75, color: "--lv-elevated"}, {y0: 75, y1: 100, color: "--lv-high"}],
       series: [{pts: s, type: "dots", color: "--warn", r: 2.5, opacity: .75, hi: sel != null ? new Set([sel]) : null}, {pts: rolling(s), color: "--text-sub", dash: true, width: 2}],
       yFmt: v => num(v, 0),
       tip: i => { const d = byI.get(i); return d ? `<b>${fmtDate(i, true)}</b><div>${LEVEL[d.level].label} · ${d.score}</div>` : ""; },
@@ -4209,7 +4277,7 @@ function gauge(score, level) {
   const arc = (s0, s1, col) => { const [x0, y0] = pt(s0), [x1, y1] = pt(s1); return `<path d="M${x0} ${y0}A${r} ${r} 0 0 1 ${x1} ${y1}" stroke="var(${col})" stroke-width="12" fill="none" stroke-linecap="butt"/>`; };
   const [nx, ny] = pt(score);
   return `<svg class="gauge" viewBox="0 0 180 112" role="img" aria-label="Stress ${score} of 100, ${LEVEL[level].label}">
-    ${arc(0, 34.5, "--good")}${arc(35.5, 59.5, "--ok")}${arc(60.5, 74.5, "--warn")}${arc(75.5, 100, "--bad")}
+    ${arc(0, 34.5, "--lv-low")}${arc(35.5, 59.5, "--lv-normal")}${arc(60.5, 74.5, "--lv-elevated")}${arc(75.5, 100, "--lv-high")}
     <circle cx="${nx}" cy="${ny}" r="9" fill="var(--surface)" stroke="var(--text)" stroke-width="3"/>
     <text x="90" y="84" text-anchor="middle" class="num" font-weight="700" font-size="36" fill="var(--text)">${score}</text>
     <text x="90" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="var(${LEVEL[level].var})">${LEVEL[level].label}</text>
@@ -4897,25 +4965,39 @@ const WATCH_TAGS = [
 const tagOff = t => !!t.retired || (!!t.auto && workoutMarks().any.size > 0);
 const minTxt = v => v >= 60 ? fmtDur(v) : Math.round(v) + " min";
 const zShort = v => v >= 60 ? fmtDur(v) : v > 0 && v < .5 ? "<1m" : Math.round(v) + "m";
+// the zones as one bar, split by the time in each
 const zoneBar = z => `<div class="stagebar" role="img" aria-label="${esc("Time in each heart rate zone: " + z.map((v, q) => `${ZONES[q][0]} ${zShort(v)}`).join(", "))}">${z.map((v, q) => v > 0 ? `<div style="flex:${v.toFixed(2)} 0 0;min-width:2px;background:var(${ZONES[q][1]})"></div>` : "").join("")}</div>`;
-const zoneLeg = z => `<div class="zleg">${z.map((v, q) => `<span><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0].replace("Zone ", "Z")} <b>${zShort(v)}</b></span>`).join("")}</div>`;
-function wkRow(w) {
-  const i = wkIdx(w), d = new Date(i * DAY), us = S.units === "us", z = wkZones(w), late = wkHard(w) ? wkLate(w) : null;
-  const when = DOW[d.getUTCDay()] + ", " + fmtDate(i, d.getUTCFullYear() !== new Date(keyToIdx(S.data.last) * DAY).getUTCFullYear()) + " · " + fmtClock((w.s % 86400) / 60);
-  const nums = [w.d >= 60 ? `<b>${fmtDur(w.d)}</b>` : `<b>${Math.round(w.d)}</b> min`,
-    w.c ? `<b>${num(w.c, 0)}</b> cal` : "", w.hr ? `<b>${w.hr}</b> avg bpm` : "", w.hx ? `<b>${w.hx}</b> max` : "",
-    w.km ? `<b>${num(us ? w.km * 0.621371 : w.km, 2)}</b> ${us ? "mi" : "km"}` : "", w.fl ? `<b>${num(w.fl, 0)}</b> floor${w.fl === 1 ? "" : "s"}` : ""].filter(Boolean);
-  const chips = [wkHard(w) ? `<span class="fchip">Hard</span>` : "", late ? `<span class="fchip">Ended ${late.gap < 1 ? "just" : minTxt(late.gap)} before you fell asleep</span>` : ""].filter(Boolean);
-  return `<div class="wk"><div class="wk-top"><b>${esc(wkName(w))}</b><span>${when}</span></div>
-    <div class="wk-nums">${nums.map(n => `<span>${n}</span>`).join("")}</div>
-    ${z && z.some(v => v > 0) ? zoneBar(z) + zoneLeg(z) : ""}
-    ${chips.length ? `<div class="fchips">${chips.join("")}</div>` : ""}</div>`;
+// the key under one: each zone's share of the time
+const zonePct = z => { const tot = z.reduce((a, v) => a + v, 0) || 1;
+  return `<div class="zleg">${z.map((v, q) => `<span><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]} <b>${Math.round(v / tot * 100)}%</b></span>`).join("")}</div>`; };
+// the heart rates a zone covers, for a maximum: "under 121", "141–161", "182+"
+const zoneRange = (q, max) => { const lo = Math.round(ZONE_FROM[q] * max), hi = q < 4 ? Math.round(ZONE_FROM[q + 1] * max) : 0; return q === 0 ? "under " + hi : hi ? lo + "–" + (hi - 1) : lo + "+"; };
+/* One workout's zones as a ladder, the hardest at the top: the zone, the heart rates it covers, a bar as long as
+   its share of the workout, and the time in it */
+function zoneRows(z, max) {
+  const tot = z.reduce((a, v) => a + v, 0) || 1;
+  return `<div class="zrows" role="img" aria-label="${esc("Time in each heart rate zone: " + z.map((v, q) => `${ZONES[q][0]} ${zShort(v)}`).reverse().join(", "))}">${[4, 3, 2, 1, 0].map(q =>
+    `<span class="zn"><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]}</span><span class="zr num">${zoneRange(q, max)}</span><span class="zb"><i style="width:${(z[q] / tot * 100).toFixed(1)}%;${z[q] > 0 ? "min-width:3px;" : ""}background:var(${ZONES[q][1]})"></i></span><b class="num">${zShort(z[q])}</b>`).join("")}</div>`;
 }
-// kept while you're here: whether Sessions shows every workout or the first few, and which days Recovery compares
-let wkAll = false, wkCmp = "w-day";
+/* How hard a workout's minutes were: zones 1–2, zone 3, zones 4–5. Its zone minutes are stretched to its length, so
+   the parts add up to its minutes of exercise; one with no heart rate to place it is all "none".
+   [key, name, colour, the zones it covers] */
+const WK_PARTS = [["light", "Light", "--rem", "zones 1–2"], ["mod", "Moderate", "--act", "zone 3"], ["hard", "Hard", "--heart", "zones 4–5"], ["none", "No heart rate", "--ink-3", ""]];
+function wkParts(w, max) {
+  const z = wkZones(w, max), zs = z ? z.reduce((a, v) => a + v, 0) : 0;
+  if (!(zs > 0)) return {light: 0, mod: 0, hard: 0, none: w.d};
+  const f = w.d / zs;
+  return {light: (z[0] + z[1]) * f, mod: z[2] * f, hard: (z[3] + z[4]) * f, none: 0};
+}
+// kept while you're here: whether a very full week lists every workout, whether Recovery is unfolded, and which days it compares
+let wkAll = false, wkRecOpen = false, wkCmp = "w-day";
 const WK_SHOWN = 8;
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/* Three cards, in the order you'd ask: how the week is going, with its workouts under it and arrows back through
+   earlier weeks; one workout in full (the latest, or the one you tapped); and how your training has gone over time,
+   cardio fitness beside it. Recovery and the explainer fold away underneath. */
 function pageWorkouts(el) {
-  const list = S.data.workouts, head = `<div><h1>Workouts</h1><p class="sub">Every workout in your Health data: how long, how hard, and how you slept and recovered after.</p></div>`;
+  const list = S.data.workouts, head = `<div><h1>Workouts</h1><p class="sub">How much you train, how hard, and how you recover after.</p></div>`;
   if (!list || !list.length) {
     el.innerHTML = `<div class="page-head">${head}</div>
       <div class="panel"><h2 style="margin-bottom:6px">${list ? "No workouts in your export" : "Upload your export again to see your workouts"}</h2>
@@ -4924,113 +5006,241 @@ function pageWorkouts(el) {
         ${S.sample ? "" : `<button class="btn primary" type="button" data-tab="data">Upload an export</button>`}</div>`;
     return;
   }
-  const [x0, x1] = xRange(S.ranges.workouts), max = hrMaxNow(), mh = S.data.hrMax;
-  const inR = list.filter(w => wkIdx(w) >= x0 && wkIdx(w) <= x1).reverse();   // newest first
-  // "a week, average": the workouts from the first one with heart rate on (or the start of the range, if that's later), over those weeks
-  const w0 = Math.max(x0, keyToIdx(workoutMarks().first)), weeks = Math.max(1, (x1 - w0 + 1) / 7);
-  const mins = inR.reduce((t, w) => t + w.d, 0), cals = inR.reduce((t, w) => t + (w.c || 0), 0);
-  const zt = [0, 0, 0, 0, 0]; for (const w of inR) { const z = wkZones(w, max); if (z) z.forEach((v, q) => { zt[q] += v; }); }
-  const zKey = max ? ZONES.map(([n, col], q) => { const lo = Math.round(ZONE_FROM[q] * max), hi = q < 4 ? Math.round(ZONE_FROM[q + 1] * max) : 0;
-    return `<span><i style="background:var(${col})"></i>${n} <b>${q === 0 ? "under " + hi : hi ? lo + "–" + (hi - 1) : lo + "+"}</b></span>`; }).join("") + `<span>bpm</span>` : "";
+  const max = hrMaxNow(), mh = S.data.hrMax, us = S.units === "us";
+  const lw = list[list.length - 1], byS = new Map(list.map(w => [w.s, w])), q = s => el.querySelector(s);
+  if (S.wkSel != null && !byS.has(S.wkSel)) S.wkSel = null;
+  const last = keyToIdx(S.data.last), today = keyToIdx(todayKey()), lastYear = new Date(last * DAY).getUTCFullYear();
+  const dow = i => DOW[new Date(i * DAY).getUTCDay()], monday = i => i - ((new Date(i * DAY).getUTCDay() + 6) % 7);
+  const clock = w => fmtClock((w.s % 86400) / 60), durOf = w => w.d >= 60 ? fmtDur(w.d) : Math.round(w.d) + " min";
+  // "Wed, Oct 7 · 9:31 PM", with the year when it isn't the latest year in your data
+  const whenOf = w => { const i = wkIdx(w); return `${dow(i)}, ${fmtDate(i, new Date(i * DAY).getUTCFullYear() !== lastYear)} · ${clock(w)}`; };
+  // "Oct 5 – 11", "Sep 29 – Oct 5"
+  const weekSpan = b => { const a = new Date(b * DAY), z = new Date((b + 6) * DAY);
+    return `${fmtDate(b)} – ${a.getUTCMonth() === z.getUTCMonth() ? z.getUTCDate() : fmtDate(b + 6)}${z.getUTCFullYear() !== lastYear ? ", " + z.getUTCFullYear() : ""}`; };
+  const count = n => `${num(n, 0)} workout${n === 1 ? "" : "s"}`;
 
-  /* cardio each week (Monday to Sunday), split by how hard: zones 1–2, zone 3, zones 4–5, and the minutes of any
-     workout with no heart rate to place it. A workout's zone minutes are stretched to its length, so a week adds up
-     to its minutes of exercise */
-  const monday = i => i - ((new Date(i * DAY).getUTCDay() + 6) % 7), cx0 = monday(x0), wkW = new Map();
-  const PARTS = [["light", "Light", "--rem", "zones 1–2"], ["mod", "Moderate", "--act", "zone 3"], ["hard", "Hard", "--heart", "zones 4–5"], ["none", "No heart rate", "--ink-3", ""]];
-  for (const w of list) {
-    const i = wkIdx(w); if (i < cx0 || i > x1 || WK_NOT_CARDIO.has(w.t)) continue;
-    const b = monday(i), o = wkW.get(b) || wkW.set(b, {light: 0, mod: 0, hard: 0, none: 0, n: 0}).get(b);
-    const z = wkZones(w, max), zs = z ? z.reduce((a, v) => a + v, 0) : 0;
-    o.n++;
-    if (zs > 0) { const f = w.d / zs; o.light += (z[0] + z[1]) * f; o.mod += z[2] * f; o.hard += (z[3] + z[4]) * f; } else o.none += w.d;
-  }
-  const wks = [...wkW].sort((a, b) => a[0] - b[0]);
-  const end = keyToIdx(S.data.last), cardio = (a, b) => list.reduce((t, w) => { const i = wkIdx(w); return i >= a && i <= b && !WK_NOT_CARDIO.has(w.t) ? t + w.d : t; }, 0);
-  const vo = series("vo2").filter(([i]) => i >= cx0 && i <= x1), voL = latest("vo2"), voD = vo.length >= 2 ? vo[vo.length - 1][1] - vo[0][1] : null;
+  /* ---- a week, Monday to Sunday: the latest in your data, or one the arrows stepped back to ---- */
+  const byDay = new Map();
+  for (const w of list) { const i = wkIdx(w); (byDay.get(i) || byDay.set(i, []).get(i)).push(w); }
+  const dayMin = i => (byDay.get(i) || []).reduce((t, w) => t + w.d, 0);
+  const wkNow = monday(today), wkL = Math.max(monday(last), monday(wkIdx(lw))), firstWk = monday(keyToIdx(workoutMarks().first));
+  // the weeks the arrows step through: every week with a workout in it, and the latest whether it has one or not
+  const weeks = [...new Set(list.map(w => monday(wkIdx(w)))).add(wkL)].sort((a, b) => a - b), weekAt = new Map(weeks.map((b, j) => [b, j]));
+  if (S.wkWeek != null && !weekAt.has(S.wkWeek)) S.wkWeek = null;
+  // a usual week: the average of the whole weeks before this one, four of them at most, none from before you started
+  const usualOf = b => { const n = Math.max(0, Math.min(4, Math.round((b - firstWk) / 7))); let t = 0; for (let i = b - 7 * n; i < b; i++) t += dayMin(i); return n ? t / n : 0; };
+  const weekHTML = b0 => {
+    const b = weekAt.has(b0) ? b0 : wkL, pos = weekAt.get(b), now = b === wkNow, ref = b === wkL ? "your usual week" : "the weeks before it";
+    const ws = []; for (let i = b; i <= b + 6; i++) ws.push(...(byDay.get(i) || []));
+    const wMin = ws.reduce((t, w) => t + w.d, 0), wCal = ws.reduce((t, w) => t + (w.c || 0), 0), usual = usualOf(b), dif = wMin - usual;
+    const title = now ? "This week" : b === wkNow - 7 ? "Last week" : b === wkL ? "Latest week" : "Selected week";
+    // how it sits against the weeks before it; a week that's still going isn't called short
+    const vs = !(usual > 0) ? "" : dif >= 5 ? `<b>${minTxt(dif)}</b> more than ${ref}` : dif > -5 ? `About the same as ${ref}`
+      : now ? `Your usual week is <b>${minTxt(usual)}</b>` : `<b>${minTxt(-dif)}</b> less than ${ref}`;
+    // one column a day: its minutes, stacked from the bottom by how hard they were
+    const scale = Math.max(45, ...WEEKDAYS.map((_, d) => dayMin(b + d))), kinds = {light: 0, mod: 0, hard: 0, none: 0};
+    const strip = WEEKDAYS.map((name, d) => {
+      const i = b + d, dws = byDay.get(i) || [], fut = i > Math.max(last, today), p = {light: 0, mod: 0, hard: 0, none: 0};
+      for (const w of dws) { const z = wkParts(w, max); for (const k in p) { p[k] += z[k]; kinds[k] += z[k]; } }
+      const segs = WK_PARTS.filter(([k]) => p[k] >= .5).map(([k, , col]) => `<i style="height:${(p[k] / scale * 100).toFixed(1)}%;background:var(${col})"></i>`).join("");
+      const lab = `${name}, ${fmtDate(i)}: ${dws.length ? dws.map(w => `${wkName(w)}, ${durOf(w)}`).join("; ") : fut ? "not here yet" : "no workout"}`;
+      return `<button type="button" class="wkd${fut ? " fut" : ""}${i === today ? " now" : ""}" ${dws.length ? `data-wk="${dws[dws.length - 1].s}" data-day="${i}"` : "disabled"} aria-label="${esc(lab)}" title="${esc(lab)}">
+        <span class="wkd-bar">${segs}</span><span class="wkd-l">${name[0]}</span><span class="wkd-m num">${dws.length ? Math.round(dayMin(i)) + "m" : "–"}</span></button>`;
+    }).join("");
+    // the week's workouts, newest first; a very full week shows its first few
+    const rows = ws.slice().reverse(), long = rows.length > WK_SHOWN + 2, cut = long && !wkAll ? WK_SHOWN : rows.length;
+    const rowHTML = w => `<button type="button" class="wkr" data-wk="${w.s}"><span class="wkr-d">${dow(wkIdx(w))}</span>
+        <span class="wkr-m"><span class="wkr-n"><b>${esc(wkName(w))}</b>${wkHard(w, max) ? `<i class="wkr-tag">Hard</i>` : ""}</span><span class="wkr-s">${clock(w)}${w.hr ? ` · <span class="num">${w.hr}</span> bpm` : ""}</span></span>
+        <b class="num wkr-t">${durOf(w)}</b></button>`;
+    return `<div class="panel-head"><h2>${title}</h2>
+        <div class="nightnav"><span class="date">${weekSpan(b)}</span>
+          <button class="iconbtn" type="button" id="wkPrev" aria-label="Earlier week" ${pos <= 0 ? "disabled" : ""}>${CHEV_L}</button>
+          <button class="iconbtn" type="button" id="wkNext" aria-label="Later week" ${pos >= weeks.length - 1 ? "disabled" : ""}>${CHEV_R}</button></div></div>
+      <div class="wkw-top"><b class="wkw-n">${ws.length ? minTxt(wMin) : "No workouts"}</b><span>${ws.length ? `${count(ws.length)}${wCal ? ` · ${num(wCal, 0)} cal` : ""}` : now ? "yet this week" : "that week"}</span></div>
+      ${vs ? `<p class="wkw-vs">${vs}</p>` : ""}
+      <div class="wkweek" role="group" aria-label="${title}, day by day">${strip}</div>
+      ${ws.length ? `<div class="legend">${WK_PARTS.filter(([k]) => kinds[k] >= .5).map(([, l, col]) => `<span><i style="background:var(${col})"></i>${l}</span>`).join("")}</div>
+      <div class="wk-list">${rows.slice(0, cut).map(rowHTML).join("")}</div>
+      ${long ? `<button type="button" class="linkbtn fmore" id="wkMore">${wkAll ? "Show fewer" : `Show all ${num(rows.length, 0)}`}</button>` : ""}` : ""}
+      ${b === wkL ? "" : `<p style="margin-top:12px"><button class="linkbtn" type="button" id="wkBack">Back to ${wkL === wkNow ? "this week" : "latest week"}</button></p>`}`;
+  };
 
-  /* recovery: the nights after one kind of day against the nights after the rest, read from the same findings as
-     "What your tags show" (the watch's own tags), so the two always agree */
-  const F = tagFindings(), CMP = [["w-day", "Any", "After workout days", "After rest days"], ["w-hard", "Hard", "After hard workouts", "After other days"], ["hard-workout-late", "Late and hard", "After late hard ones", "After other days"]];
-  if (!CMP.some(c => c[0] === wkCmp)) wkCmp = "w-day";
-  const cdef = CMP.find(c => c[0] === wkCmp), cur = F.tags.find(x => x.t.watch && x.t.id === wkCmp);
-  const REC = [["sleep", "Sleep that night"], ["hrv", "HRV the next day"], ["rhr", "Resting HR the next day"]];
-  const recRows = !cur ? `<p class="empty-note">No days like that in your data yet.</p>`
-    : !cur.rows.length ? `<p class="empty-note">${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that so far. It takes ${FIND_MIN} before the nights after them can be compared.</p>`
-    : REC.map(([key, label]) => {
-        const r = cur.rows.find(x => x.key === key); if (!r) return "";
-        if (r.few) return `<div class="rec-row"><div class="rec-head"><b>${label}</b><span class="fchip few">Too few nights to compare</span></div></div>`;
-        return `<div class="rec-row"><div class="rec-head"><b>${label}</b><span class="fchip${r.clear ? (r.good ? " good" : " bad") : ""}">${r.clear ? esc(findDiff(key, r.diff)) : "About the same"}</span></div>
-          <div class="rec-v"><span class="lbl">${cdef[2]}</span><b>${fmtVal(key, r.mA)}</b></div><div class="rec-v"><span class="lbl">${cdef[3]}</span><b>${fmtVal(key, r.mB)}</b></div></div>`;
-      }).join("");
+  /* ---- one workout in full: the latest, or the one picked ---- */
+  const fig = (label, v, unit) => `<div><span>${label}</span><b>${v}${unit ? `<small>${unit}</small>` : ""}</b></div>`;
+  const figs = w => {
+    const dist = w.km ? (us ? w.km * 0.621371 : w.km) : 0, du = us ? "mi" : "km";
+    // pace, for the ones done on foot: minutes and seconds a mile (or a kilometre)
+    const secs = dist >= .1 && ["Running", "Walking", "Hiking"].includes(w.t) ? Math.round(w.d * 60 / dist) : 0;
+    return [w.d >= 60 ? fig("Time", fmtDur(w.d)) : fig("Time", Math.round(w.d), "min"),
+      w.c ? fig("Calories", num(w.c, 0), "cal") : "", w.hr ? fig("Avg HR", w.hr, "bpm") : "", w.hx ? fig("Max HR", w.hx, "bpm") : "",
+      dist ? fig("Distance", num(dist, 2), du) : "", secs > 0 && secs < 3600 ? fig("Pace", `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`, "/" + du) : "",
+      w.fl ? fig("Floors", num(w.fl, 0)) : ""].join("");
+  };
+  const cardHTML = s => {
+    const w = byS.get(s) || lw, pos = list.indexOf(w), z = wkZones(w, max), hard = wkHard(w, max), late = hard ? wkLate(w) : null;
+    const zones = !max ? `<p class="explain" style="margin:14px 0 0">No heart rate zones: Pulse couldn't tell your maximum heart rate from this export. Setting your date of birth in the Health app fixes that.</p>`
+      : z && z.some(v => v > 0) ? `<div class="zhead"><h3>Heart rate zones</h3><span>bpm, of your ${max} maximum</span></div>${zoneRows(z, max)}`
+      : `<p class="explain" style="margin:14px 0 0">${w.hr ? "Too few heart rate readings were taken during this workout to split it into zones." : "No heart rate was recorded for this workout, so it has no zones."}</p>`;
+    return `<div class="panel-head"><h2>${w === lw ? "Latest workout" : "Selected workout"}</h2>
+        <div class="nightnav"><span class="date">${whenOf(w)}</span>
+          <button class="iconbtn" type="button" id="wPrev" aria-label="Earlier workout" ${pos <= 0 ? "disabled" : ""}>${CHEV_L}</button>
+          <button class="iconbtn" type="button" id="wNext" aria-label="Later workout" ${pos >= list.length - 1 ? "disabled" : ""}>${CHEV_R}</button></div></div>
+      <div class="wk-title"><b>${esc(wkName(w))}</b>${hard ? `<span class="fchip">Hard</span>` : ""}${late ? `<span class="fchip">Ended ${late.gap < 1 ? "just" : minTxt(late.gap)} before you fell asleep</span>` : ""}</div>
+      <div class="kv wk-kv">${figs(w)}</div>
+      ${zones}
+      ${w === lw ? "" : `<p style="margin-top:14px"><button class="linkbtn" type="button" id="wBack">Back to latest workout</button></p>`}`;
+  };
 
-  const cut = wkAll || inR.length <= WK_SHOWN + 1 ? inR.length : WK_SHOWN;
-  el.innerHTML = `<div class="page-head">${head}${rangeSeg("wkRange", S.ranges.workouts)}</div>
-    <div class="panel"><div class="kv">
-      <div><span>Workouts</span><b>${num(inR.length, 0)}</b></div>
-      <div><span>Time</span><b>${minTxt(mins)}</b></div>
-      <div><span>A week, average</span><b>${num(inR.filter(w => wkIdx(w) >= w0).length / weeks, 1)}</b></div>
-      <div><span>Active calories</span><b>${num(cals, 0)}</b></div></div>
-      ${zt.some(v => v > 0) ? `<h3 style="margin-top:16px">Time in each heart rate zone</h3>${zoneBar(zt)}${zoneLeg(zt)}` : ""}
+  /* ---- your training: the range's totals, the weeks, and cardio fitness beside them. It draws itself, so picking
+     another range draws this card again and nothing above it ---- */
+  const tile = (label, v, note) => `<div><span>${label}</span><b>${v}</b>${note ? `<small class="delta">${note}</small>` : ""}</div>`;
+  const drawTrain = () => {
+    const [x0, x1] = xRange(S.ranges.workouts);
+    const inR = list.filter(w => wkIdx(w) >= x0 && wkIdx(w) <= x1);
+    // the "a week" figures: the workouts from the first one with heart rate on (or the start of the range, if that's later), over those weeks
+    const w0 = Math.max(x0, keyToIdx(workoutMarks().first)), nWeeks = Math.max(1, (x1 - w0 + 1) / 7), since = inR.filter(w => wkIdx(w) >= w0);
+    const sum = (ws, f) => ws.reduce((t, w) => t + f(w), 0), mins = sum(inR, w => w.d), cals = sum(inR, w => w.c || 0);
+    const zt = [0, 0, 0, 0, 0]; for (const w of inR) { const z = wkZones(w, max); if (z) z.forEach((v, j) => { zt[j] += v; }); }
+    /* cardio each week (Monday to Sunday), split by how hard (wkParts), so a week adds up to its minutes of exercise */
+    const cx0 = monday(x0), wkW = new Map();
+    for (const w of list) {
+      const i = wkIdx(w); if (i < cx0 || i > x1 || WK_NOT_CARDIO.has(w.t)) continue;
+      const b = monday(i), o = wkW.get(b) || wkW.set(b, {light: 0, mod: 0, hard: 0, none: 0, n: 0}).get(b), z = wkParts(w, max);
+      o.n++; for (const k in z) o[k] += z[k];
+    }
+    const wks = [...wkW].sort((a, b) => a[0] - b[0]);
+    const cardio = (a, b) => list.reduce((t, w) => { const i = wkIdx(w); return i >= a && i <= b && !WK_NOT_CARDIO.has(w.t) ? t + w.d : t; }, 0);
+    const vo = series("vo2").filter(([i]) => i >= cx0 && i <= x1), voL = latest("vo2"), voD = vo.length >= 2 ? vo[vo.length - 1][1] - vo[0][1] : null;
+    const voNote = voD != null ? (Math.abs(voD) < .05 ? "No change in this range" : `${voD > 0 ? "Up" : "Down"} ${num(Math.abs(voD), 1)} in this range`)
+      : !voL ? "No readings yet" : voL[0] < cx0 ? `Last read ${fmtDate(voL[0], true)}` : "One reading in this range";
+    q("#wkTrainBody").innerHTML = `<div class="kv" style="margin-top:10px">
+      ${tile("Workouts", num(inR.length, 0), `${num(since.length / nWeeks, 1)} a week`)}
+      ${tile("Time", minTxt(mins), `${minTxt(sum(since, w => w.d) / nWeeks)} a week`)}
+      ${tile("Active calories", num(cals, 0), cals ? `${num(sum(since, w => w.c || 0) / nWeeks, 0)} a week` : "")}
+      ${tile("VO₂ max", voL ? num(voL[1], 1) : "—", voNote)}
     </div>
-    <div class="grid two" style="margin-top:16px">
-      <div>
-        <div class="panel" id="wkSess"><div class="panel-head"><h2>Sessions</h2><span class="muted" style="font-size:13px">${num(inR.length, 0)} in this range</span></div>
-          ${zKey ? `<div class="zleg" style="margin:6px 0 4px">${zKey}</div>` : `<p class="explain">No heart rate zones: Pulse couldn't tell your maximum heart rate from this export. Setting your date of birth in the Health app fixes that.</p>`}
-          ${inR.length ? `<div class="wk-list">${inR.slice(0, cut).map(wkRow).join("")}</div>` : `<p class="empty-note">No workouts in this time range.</p>`}
-          ${inR.length > WK_SHOWN + 1 ? `<button type="button" class="linkbtn fmore" id="wkMore">${wkAll ? "Show fewer" : `Show all ${num(inR.length, 0)}`}</button>` : ""}
-        </div>
+    <div class="wk-charts">
+      <div><h3>Cardio each week</h3>
+        <p class="explain">Minutes of cardio, split by how hard your heart was working.</p>
+        <div class="chart" id="wkWeeks"></div>
+        <div class="legend">${WK_PARTS.filter(([k]) => wks.some(([, o]) => o[k] >= .5)).map(([, l, col, zs]) => `<span><i style="background:var(${col})"></i>${l}${zs ? ` (${zs})` : ""}</span>`).join("")}</div>
+        <p class="wk-note"><b>${num(Math.round(cardio(last - 27, last) / 4), 0)} min</b> a week over the last 4 weeks, <b>${num(Math.round(cardio(last - 55, last - 28) / 4), 0)} min</b> a week over the 4 before.</p>
       </div>
-      <div>
-        <div class="panel"><div class="panel-head"><h2>Cardio each week and VO₂ max</h2></div>
-          <p class="explain">Minutes of cardio each week, split by how hard your heart was working, above your cardio fitness estimate. How much you do and how hard are the two things that move VO₂ max, over weeks to months.</p>
-          <div class="chart" id="wkWeeks"></div>
-          <div class="legend">${PARTS.map(([, l, col, zs]) => `<span><i style="background:var(${col})"></i>${l}${zs ? ` (${zs})` : ""}</span>`).join("")}</div>
-          <h3 style="margin:18px 0 4px">VO₂ max</h3>
-          <div class="chart" id="wkVo2"></div>
-          <p class="muted" style="font-size:13px;margin-top:8px">Apple Watch only estimates VO₂ max from outdoor walks, runs and hikes. Treadmill and stair stepper sessions still build it, and the number catches up the next time you walk or run outside.</p>
-          <div class="stats wk-stats">
-            <div><span>Cardio a week, last 4 weeks</span><b>${num(Math.round(cardio(end - 27, end) / 4), 0)} min</b></div>
-            <div><span>The 4 weeks before</span><b>${num(Math.round(cardio(end - 55, end - 28) / 4), 0)} min</b></div>
-            ${voL ? `<div><span>VO₂ max, latest</span><b>${num(voL[1], 1)}</b></div>` : ""}
-            ${voD != null ? `<div><span>VO₂ max, change in range</span><b>${voD > 0 ? "+" : voD < 0 ? "−" : ""}${num(Math.abs(voD), 1)}</b></div>` : ""}
-          </div>
-        </div>
-        <div class="panel" style="margin-top:16px"><div class="panel-head"><h2>Recovery</h2>
-          <div class="seg" role="group" aria-label="Which days to compare" id="wkCmp">${CMP.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === wkCmp}">${l}</button>`).join("")}</div></div>
-          <p class="explain">The night after ${wkCmp === "w-day" ? "a day with a workout, against the night after a rest day" : wkCmp === "w-hard" ? "a hard workout, against the night after every other day" : "a hard workout that ended within 3 hours of falling asleep, against every other night"}. From all your data, not only this time range.</p>
-          ${recRows}
-          <p class="muted" style="font-size:13px;margin-top:10px">${cur ? `${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that since ${fmtDate(keyToIdx(workoutMarks().first), true)}. ` : ""}The same comparisons sit under <button type="button" class="linkbtn" data-tab="habits" style="font-size:inherit">What your tags show</button> on Habits.</p>
-        </div>
+      <div><h3>VO₂ max</h3>
+        <p class="explain">Your watch's estimate of cardio fitness.</p>
+        <div class="chart" id="wkVo2"></div>
       </div>
     </div>
-    <div class="panel" style="margin-top:16px"><details class="how-fit"><summary>How this works</summary><ul>
+    ${zt.some(v => v > 0) ? `<h3 style="margin:20px 0 0">Time in each zone</h3>${zoneBar(zt)}${zonePct(zt)}` : ""}`;
+    chart(q("#wkWeeks"), {x: [cx0, x1], height: 180, zero: true, label: "Minutes of cardio each week",
+      series: WK_PARTS.map(([k, , col]) => ({pts: wks.filter(([, o]) => o[k] > 0).map(([b, o]) => [b, o[k]]), type: "bar", stack: true, every: 7, color: col})),
+      yFmt: (v, d) => num(v, d),
+      tip: b => { const o = wkW.get(b); if (!o) return "";
+        return `<b>Week of ${fmtDate(b, true)}</b><div>${num(Math.round(o.light + o.mod + o.hard + o.none), 0)} min of cardio · ${o.n} workout${o.n === 1 ? "" : "s"}</div>` + WK_PARTS.filter(([k]) => o[k] >= .5).map(([k, l, col]) => tipLine(l, num(Math.round(o[k]), 0) + " min", col)).join(""); }});
+    if (vo.length) {
+      const vm = new Map(vo);
+      // the empty set of bars gives this chart the same side margins as the weekly one, so their weeks line up
+      chart(q("#wkVo2"), {x: [cx0, x1], height: 180, label: "VO2 max",
+        series: [{pts: [], type: "bar", every: 7, color: "--heart"}, {pts: vo, color: "--heart", gap: 1e6, dotsIfFew: true, width: 2, endDot: true}],
+        yFmt: (v, d) => num(v, d), tip: i => vm.has(i) ? `<b>${fmtDate(i, true)}</b><div>VO₂ max ${num(vm.get(i), 1)}</div>` : ""});
+    } else q("#wkVo2").innerHTML = `<p class="empty-note">${has("vo2") ? "No VO₂ max readings in this time range." : "Your export has no VO₂ max readings yet."}</p>`;
+  };
+
+  el.innerHTML = `<div class="page-head">${head}</div>
+    <div class="grid two wk-two">
+      <div class="panel" id="wkWeek" aria-live="polite" data-grow-from=".5"></div>
+      <div class="panel" id="wkDay" aria-live="polite" data-grow-from=".5"></div>
+    </div>
+    <div class="panel" id="wkTrain" style="margin-top:16px"><div class="panel-head"><h2>Your training</h2>${rangeSeg("wkRange", S.ranges.workouts)}</div>
+      <div id="wkTrainBody"></div>
+    </div>
+    <div class="panel" id="wkRec"><details class="more" id="wkRecMore"${wkRecOpen ? " open" : ""}>
+      <summary>${CHEV_R}<div><h2>Recovery</h2><p class="wk-sub">The night after a workout, against other nights</p></div><span class="more-hint more-show">Show</span><span class="more-hint more-hide">Hide</span></summary>
+      <div id="wkRecBody"></div></details></div>
+    <div class="panel"><details class="how-fit"><summary>How this works</summary><ul>
       <li>Workouts are read from your export as your watch (or another app) saved them: the kind, how long, active calories, distance, and the average and highest heart rate. A workout saved twice by two apps is counted once.</li>
       <li>Heart rate zones are a share of your maximum heart rate: zone 1 is under 60%, zone 2 is 60–70%, zone 3 is 70–80%, zone 4 is 80–90%, and zone 5 is 90% and up.${mh ? ` Pulse takes your maximum as ${mh.v} bpm, ${mh.by === "age" ? "which is 220 minus your age" : "the highest your watch has recorded across several workouts"}.` : ""} The Workout app on the watch draws its zones a little differently, so its minutes may not match these exactly.</li>
       <li>The time in each zone is counted from the heart rate readings taken while the workout ran. A workout with readings for less than a third of it shows no zones.</li>
-      <li>Cardio is every workout except strength, core, yoga, Pilates, stretching and cooldowns. Weeks run Monday to Sunday.</li>
-      <li>“A week, average” and Recovery count from your first workout with heart rate readings. A few workouts logged without a watch long before it still show in Sessions, but they don't stretch the average or count the time in between as rest days.</li>
+      <li>Light is zones 1 and 2, moderate is zone 3, and hard is zones 4 and 5.</li>
+      <li>A week counts every workout in it, Monday to Sunday, and is compared with the average of the four weeks before it. The arrows step through the weeks that have a workout.</li>
+      <li>Cardio is every workout except strength, core, yoga, Pilates, stretching and cooldowns.</li>
+      <li>Apple Watch only estimates VO₂ max from outdoor walks, runs and hikes. Treadmill and stair stepper sessions still build it, and the number catches up the next time you walk or run outside.</li>
+      <li>The “a week” figures and Recovery count from your first workout with heart rate readings. A few workouts logged without a watch long before it still show in their own weeks, but they don't stretch the averages or count the time in between as rest days.</li>
       <li>A hard workout has 10 minutes or more in zones 4 and 5, or an average heart rate of 75% of your maximum or more.</li>
       <li>A hard workout that ended in the 3 hours before you fell asleep is marked on that day by itself, from the workout's end and the start of that night's sleep. That's why the check-in stops asking about it once your export has workouts. Days you ticked it yourself still count.</li>
       <li>Recovery reads the night after each day, and the next day's HRV and resting heart rate. A difference is only called out when it's bigger than your usual night-to-night swing. Otherwise it says “About the same”. Days you tagged as sick, and days around a supplement change, are left out. It shows what goes together, not what causes what.</li>
     </ul></details></div>`;
 
-  chart($("#wkWeeks"), {x: [cx0, x1], height: 190, zero: true, label: "Minutes of cardio each week",
-    series: PARTS.map(([k, , col]) => ({pts: wks.filter(([, o]) => o[k] > 0).map(([b, o]) => [b, o[k]]), type: "bar", stack: true, every: 7, color: col})),
-    yFmt: (v, d) => num(v, d),
-    tip: b => { const o = wkW.get(b); if (!o) return "";
-      return `<b>Week of ${fmtDate(b, true)}</b><div>${num(Math.round(o.light + o.mod + o.hard + o.none), 0)} min of cardio · ${o.n} workout${o.n === 1 ? "" : "s"}</div>` + PARTS.filter(([k]) => o[k] >= .5).map(([k, l, col]) => tipLine(l, num(Math.round(o[k]), 0) + " min", col)).join(""); }});
-  if (vo.length) {
-    const vm = new Map(vo);
-    // the empty set of bars gives this chart the same side margins as the one above, so their weeks line up
-    chart($("#wkVo2"), {x: [cx0, x1], height: 150, label: "VO2 max",
-      series: [{pts: [], type: "bar", every: 7, color: "--heart"}, {pts: vo, color: "--heart", gap: 1e6, dotsIfFew: true, width: 2, endDot: true}],
-      yFmt: (v, d) => num(v, d), tip: i => vm.has(i) ? `<b>${fmtDate(i, true)}</b><div>VO₂ max ${num(vm.get(i), 1)}</div>` : ""});
-  } else $("#wkVo2").innerHTML = `<p class="empty-note">${has("vo2") ? "No VO₂ max readings in this time range." : "Your export has no VO₂ max readings yet."}</p>`;
-  bindSeg("wkRange", v => { S.ranges.workouts = v; wkAll = false; redrawQuietly(() => pageWorkouts(el)); });
-  bindSeg("wkCmp", v => { wkCmp = v; redrawQuietly(() => pageWorkouts(el)); });
-  const more = $("#wkMore");
-  if (more) more.onclick = () => { wkAll = !wkAll; redrawQuietly(() => pageWorkouts(el)); if (!wkAll) $("#wkSess").scrollIntoView({block: "nearest"}); };
+  drawTrain();
+
+  /* The two cards at the top are day cards (makeDayNav, as on Sleep and Stress): the week, with arrows through the
+     weeks, and the workout, with arrows through the workouts. The workout on show is marked in its week: its day
+     ringed, its row tinted. Stepping to a workout in another week brings that week with it. */
+  const markSel = () => {
+    const w = byS.get(S.wkSel) || lw, di = wkIdx(w);
+    el.querySelectorAll(".wkd[data-day]").forEach(b => b.classList.toggle("sel", +b.dataset.day === di));
+    el.querySelectorAll(".wkr").forEach(b => { const on = +b.dataset.wk === w.s; b.classList.toggle("sel", on); if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); });
+  };
+  const showWeek = makeDayNav({
+    get: () => S.wkWeek, set: v => { if (v !== S.wkWeek) wkAll = false; S.wkWeek = v; }, latest: wkL, days: weeks, panel: () => q("#wkWeek"),
+    ids: {prev: "wkPrev", next: "wkNext", back: "wkBack"}, html: weekHTML, dateFor: weekSpan,
+    render: b => { q("#wkWeek").innerHTML = weekHTML(b); }, after: markSel});
+  let shown = null;   // the workout the card last showed
+  const show = makeDayNav({
+    get: () => S.wkSel, set: v => { S.wkSel = v; }, latest: lw.s, days: list.map(w => w.s), panel: () => q("#wkDay"),
+    ids: {prev: "wPrev", next: "wNext", back: "wBack"}, html: cardHTML, dateFor: s => whenOf(byS.get(s) || lw),
+    render: s => { q("#wkDay").innerHTML = cardHTML(s); },
+    after: s => {
+      const w = byS.get(s) || lw, b = monday(wkIdx(w));
+      if (shown != null && shown !== w.s && b !== (S.wkWeek ?? wkL)) showWeek(b); else markSel();
+      shown = w.s;
+    }});
+  showWeek(S.wkWeek); show(S.wkSel);
+  // a day or a row in the week: that workout, in the card beside it (under it on a phone, so the page moves there)
+  q("#wkWeek").addEventListener("click", e => {
+    if (e.target.closest("#wkMore")) { wkAll = !wkAll; redrawQuietly(() => showWeek(S.wkWeek)); return; }
+    const b = e.target.closest("[data-wk]"); if (!b || !byS.has(+b.dataset.wk)) return;
+    show(+b.dataset.wk);
+    const card = q("#wkDay"), r = card.getBoundingClientRect();
+    if (r.top < 60 || r.top > innerHeight * .45) card.scrollIntoView({behavior: reduceMotion() ? "auto" : "smooth", block: "start"});
+  });
+  // another range: this card alone is drawn again, and the control stays where it was tapped
+  bindSeg("wkRange", v => {
+    S.ranges.workouts = v;
+    q("#wkRange").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(v))));
+    redrawQuietly(drawTrain);
+  });
+
+  /* recovery: the nights after one kind of day against the nights after the rest, read from the same findings as
+     "What your tags show" (the watch's own tags), so the two always agree. Worked out when it's first unfolded */
+  const CMP = [["w-day", "Any", "After workout days", "After rest days"], ["w-hard", "Hard", "After hard workouts", "After other days"], ["hard-workout-late", "Late and hard", "After late hard ones", "After other days"]];
+  const REC = [["sleep", "Sleep that night"], ["hrv", "HRV the next day"], ["rhr", "Resting HR the next day"]];
+  let F = null;
+  const drawRec = () => {
+    F = F || tagFindings();
+    if (!CMP.some(c => c[0] === wkCmp)) wkCmp = "w-day";
+    const cdef = CMP.find(c => c[0] === wkCmp), cur = F.tags.find(x => x.t.watch && x.t.id === wkCmp);
+    const recRows = !cur ? `<p class="empty-note">No days like that in your data yet.</p>`
+      : !cur.rows.length ? `<p class="empty-note">${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that so far. It takes ${FIND_MIN} before the nights after them can be compared.</p>`
+      : REC.map(([key, label]) => {
+          const r = cur.rows.find(x => x.key === key); if (!r) return "";
+          if (r.few) return `<div class="rec-row"><div class="rec-head"><b>${label}</b><span class="fchip few">Too few nights to compare</span></div></div>`;
+          // each bar is as long as its average against the larger of the two, so two bars the same length read as no difference
+          const top = Math.max(r.mA, r.mB) || 1, bar = v => `<span class="cbar" aria-hidden="true"><i style="width:${Math.max(0, v / top * 100).toFixed(1)}%"></i></span>`;
+          return `<div class="rec-row"><div class="rec-head"><b>${label}</b><span class="fchip${r.clear ? (r.good ? " good" : " bad") : ""}">${r.clear ? esc(findDiff(key, r.diff)) : "About the same"}</span></div>
+            <div class="rec-v"><span class="rec-l">${cdef[2]}</span>${bar(r.mA)}<b>${fmtVal(key, r.mA)}</b></div><div class="rec-v alt"><span class="rec-l">${cdef[3]}</span>${bar(r.mB)}<b>${fmtVal(key, r.mB)}</b></div></div>`;
+        }).join("");
+    q("#wkRecBody").innerHTML = `<div class="seg" role="group" aria-label="Which days to compare" id="wkCmp">${CMP.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === wkCmp}">${l}</button>`).join("")}</div>
+      <p class="explain">The night after ${wkCmp === "w-day" ? "a day with a workout, against the night after a rest day" : wkCmp === "w-hard" ? "a hard workout, against the night after every other day" : "a hard workout that ended within 3 hours of falling asleep, against every other night"}. From all your data, not only the time range above.</p>
+      ${recRows}
+      <p class="muted" style="font-size:13px;margin-top:10px">${cur ? `${num(cur.n, 0)} day${cur.n === 1 ? "" : "s"} like that since ${fmtDate(keyToIdx(workoutMarks().first), true)}. ` : ""}The same comparisons sit under <button type="button" class="linkbtn" data-tab="habits" style="font-size:inherit">What your tags show</button> on Habits.</p>`;
+    bindSeg("wkCmp", v => { wkCmp = v; redrawQuietly(drawRec); });
+  };
+  const rec = q("#wkRecMore");
+  // filled on the tap that unfolds it, before it starts to open
+  rec.querySelector("summary").addEventListener("click", () => { if (!rec.open) drawRec(); });
+  rec.addEventListener("toggle", () => { wkRecOpen = rec.open; if (rec.open && !q("#wkRecBody").firstElementChild) drawRec(); });
+  if (wkRecOpen) drawRec();
 }
 
 /* ---------- Trends ---------- */
