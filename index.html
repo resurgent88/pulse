@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-Sv3otyUsegXSVPvOmC4FrCIueZMD6T42LYcm6TR6LQw=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-qPIiBunYbMbdWVOHE4e3XA4k2agFINlfxw0i2nvem1M=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -2614,15 +2614,17 @@ function buildNights(C) {
      night, as naps: [[start, end, minutes asleep]] (start and end in minutes after midnight) and nap: their total.
      A day with naps but no night has nowhere to show them, so they're left out */
   const NAP_MIN = 10, CLEAR = 60 * 6e4;
+  // with no sleep stages, the time in bed less the time marked awake: a stretch that was all awake isn't a nap
+  const slept = n => n.inBedOnly ? n.asleep - n.awake : n.asleep;
   const cov = mergeIntervals(Object.values(nights).map(n => [n._s - CLEAR, n._e + CLEAR]));
   const naps = [];
-  for (const n of spare.sort((a, b) => b.score - a.score || b.asleep - a.asleep)) {
-    if (n.asleep < NAP_MIN || overlaps(cov, n._s, n._e) || naps.some(o => n._s < o._e && o._s < n._e)) continue;
+  for (const n of spare.sort((a, b) => b.score - a.score || slept(b) - slept(a))) {
+    if (slept(n) < NAP_MIN || overlaps(cov, n._s, n._e) || naps.some(o => n._s < o._e && o._s < n._e)) continue;
     naps.push(n);
   }
   for (const n of naps.sort((a, b) => a._s - b._s)) {
     const night = nights[new Date(n._e).toISOString().slice(0, 10)]; if (!night) continue;
-    const m = Math.round(n.asleep);
+    const m = Math.round(slept(n));
     (night.naps || (night.naps = [])).push([Math.round(n._s / 6e4) % 1440, Math.round(n._e / 6e4) % 1440, m]);
     night.nap = (night.nap || 0) + m;
   }
@@ -5234,8 +5236,10 @@ function zoneDonut(z) {
     <div class="zd-mid"><b${mv.length > 4 ? ' style="font-size:16px"' : ""}>${mv}</b><span>${mu}</span></div></div>
     <div class="zd-leg">${[4, 3, 2, 1, 0].map(q => `<span class="zn"><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]}</span><span></span><b>${zShort(z[q])}</b><em>${Math.round(z[q] / tot * 100)}%</em>`).join("")}</div></div>`;
 }
-// along the bottom of the two charts over time: the start, halfway and the end
-const zAxis = w => `<div class="zx" aria-hidden="true"><span>0</span><span>${Math.round(w.d / 2)} min</span><span>${minTxt(w.d)}</span></div>`;
+/* along the bottom of the two charts over time: the start, halfway and the end. Those charts run from the workout's
+   start to its end, pauses included, so this is time since it started, not minutes of exercise */
+const zAxis = w => { const m = (w.e - w.s) / 60;
+  return `<div class="zx" aria-hidden="true"><span>0</span><span>${Math.round(m / 2)} min</span><span>${minTxt(m)}</span></div>`; };
 // a workout's heart rate over time, over the bands of the zones; its highest point marked
 function zoneLine(w, max) {
   const v = w.ht.slice(1), n = v.length, got = v.filter(x => x > 0);
