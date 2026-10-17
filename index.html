@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-sMDf0Jxi4spUNR6FdkKjDCOtb2S3IjzG8pOqwl5Dj4A=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-nZp/gnZQpcNJhIcLVI8zOCopdM4Cqg8jwhDMqPKUrw8=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -508,7 +508,7 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
   --ground:#f3f7f6; --surface:#ffffff; --surface-2:#eaf1ef; --line:#d8e3e0; --grid:#e6eeec;
   --text:#122220; --text-sub:#4c615d; --ink-3:#7b8f8b;
   --accent:#0c8277; --accent-ink:#ffffff; --accent-soft:#d6efeb;
-  --sleep:#6a5acd; --heart:#d4474a; --act:#0d8a7e; --body:#c27a12; --deep:#3b2f9e; --core:#7d6fe0; --rem:#4fa6e8; --awake:#e39a4c;
+  --sleep:#6a5acd; --heart:#d4474a; --act:#0d8a7e; --body:#c27a12; --deep:#3b2f9e; --core:#7d6fe0; --rem:#4fa6e8; --awake:#e39a4c; --nap:#9b8fe8;
   --good:#107a37; --good-soft:#dcf1e2; --ok:#2c5ea8; --ok-soft:#e3ebf9; --warn:#945a00; --warn-soft:#fbecd0; --bad:#b83232; --bad-soft:#f8dddd;
   /* The stress levels as filled marks (the 30-day strip, the gauge, a card's dot, the bars under it): one fixed set, the
      same in every theme, so a level looks the same wherever it's seen. Picked to stay apart from one another, for
@@ -540,7 +540,7 @@ dialog.sheet.acct{width:min(420px,calc(100vw - 24px))}
 /* Status, metric and sleep-stage colours. Not part of a theme: they carry meaning, so every
    dark theme gets the same dark ramp. The JS sets data-scheme alongside data-theme. */
 :root[data-scheme="dark"]{
-  --sleep:#9a8cf0; --heart:#ef6b6b; --act:#36c2b2; --body:#e3a23f; --deep:#6b5ce0; --core:#9d92f2; --rem:#64b7f0; --awake:#eaa45e;
+  --sleep:#9a8cf0; --heart:#ef6b6b; --act:#36c2b2; --body:#e3a23f; --deep:#6b5ce0; --core:#9d92f2; --rem:#64b7f0; --awake:#eaa45e; --nap:#c9c1fa;
   --good:#4cc46f; --good-soft:#123522; --ok:#9dbdf7; --ok-soft:#1b2942; --warn:#f0b54a; --warn-soft:#3a2c10; --bad:#f38080; --bad-soft:#3d1a1a;
 }
 /* Themes, sampled from Monkeytype. --title is a second colour from the theme, for headings */
@@ -1533,6 +1533,44 @@ dialog.sheet.ask{width:min(420px,calc(100vw - 32px));height:fit-content;max-heig
 .zleg span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .zleg i{width:9px;height:9px;border-radius:3px;flex:none}
 .zleg b{font-family:var(--font-num);font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
+/* the zone charts' style picker: a small row of icons beside the heading, and the styles it switches between */
+.zhead.zpick{align-items:center}
+.zvbtn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 8px 0 9px;border:1px solid var(--line);background:var(--surface);border-radius:8px;color:var(--text-sub);font:inherit;font-size:13px;font-weight:500}
+.zvbtn:hover{border-color:var(--text-sub);color:var(--text)}
+.zvbtn[aria-expanded="true"]{border-color:var(--accent);color:var(--text)}
+.zvbtn svg{display:block;flex:none}
+.zvbtn .zi svg{width:16px;height:16px}
+.zvbtn .zc svg{width:11px;height:11px;transform:rotate(90deg);transition:transform .15s}
+.zvbtn[aria-expanded="true"] .zc svg{transform:rotate(-90deg)}
+.fmenu.zvmenu{min-width:220px}
+.zvm-h{padding:6px 10px 4px;font-size:12px;font-weight:600;color:var(--text-sub)}
+.zvmenu .fopt[aria-checked="true"]{font-weight:600}
+.zvmenu .fopt[aria-checked="true"] > svg{visibility:visible}
+.zvmenu .fopt .zi{display:inline-grid;place-items:center}
+.zvmenu .fopt .zi svg{visibility:visible;width:16px;height:16px;color:var(--text-sub)}
+.zvmenu .fopt small{margin-left:auto;padding-left:14px;font-size:12px;font-weight:400;color:var(--text-sub)}
+.znote{font-size:12.5px;color:var(--text-sub);margin:10px 0 0}
+.zdonut{display:flex;align-items:center;gap:14px 22px;flex-wrap:wrap}
+.zd-ring{position:relative;width:132px;height:132px;flex:none}
+.zd-ring svg{width:100%;height:100%;display:block;transform:rotate(-90deg)}
+.zd-mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1.15}
+.zd-mid b{font-family:var(--font-num);font-size:22px;font-weight:500}
+.zd-mid span{font-size:12px;color:var(--text-sub)}
+.zd-leg{flex:1;min-width:190px;max-width:360px;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:7px 12px;font-size:13.5px}
+.zd-leg b,.zd-leg em{font-family:var(--font-num);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.zd-leg b{font-weight:500}
+.zd-leg em{font-style:normal;font-size:12.5px;color:var(--text-sub)}
+.zplot{position:relative;margin:4px 0 0 34px}
+.zplot .zl-box{position:relative;height:150px}
+.zplot svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.zplot .yl{position:absolute;left:-34px;width:28px;text-align:right;transform:translateY(-50%);font:11px var(--font-num);color:var(--text-sub)}
+.zplot .zdot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--heart);box-shadow:0 0 0 2px var(--surface)}
+.zplot .zpk{position:absolute;transform:translate(-50%,-150%);font:11px var(--font-num);color:var(--text);white-space:nowrap}
+.zx{display:flex;justify-content:space-between;font:11px var(--font-num);color:var(--text-sub);margin:5px 0 10px}
+.zrib{display:flex;height:22px;border-radius:6px;overflow:hidden;margin:6px 0 0}
+.zrib i{height:100%;min-width:1px}
+.zv-host{position:relative}
+.zb i{transform-origin:0 50%}
 /* your training: four totals (two by two on a phone, in a row on a wide screen), then the two charts side by side
    where there's room for both */
 #wkTrain .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -2522,7 +2560,8 @@ function sumDedup(recs) {
 }
 
 function buildNights(C) {
-  const nights = {};
+  // spare: every stretch of sleep that isn't a night's main sleep, sorted into naps once all the nights are known
+  const nights = {}, spare = [];
   for (const [src, recs] of Object.entries(C.sleep)) {
     recs.sort((a, b) => a[0] - b[0]);
     const sessions = []; let cur = null;
@@ -2533,8 +2572,7 @@ function buildNights(C) {
     for (const s of sessions) {
       const endD = new Date(s.end), endH = endD.getUTCHours();
       const span = (s.end - s.start) / 6e4;
-      if (endH >= 12 && endH < 20 && span < 240) continue; // daytime nap
-      if (span < 60) continue;
+      const nappish = (endH >= 12 && endH < 20 && span < 240) || span < 60;   // daytime nap, or too short for a night
       const stages = {core: [], deep: [], rem: [], unspec: [], awake: [], inbed: []};
       for (const r of s.recs) stages[r[2]].push([r[0], r[1]]);
       const len = l => mergeIntervals(l.map(x => x.slice())).reduce((t, [a, b]) => t + (b - a), 0) / 6e4;
@@ -2554,20 +2592,39 @@ function buildNights(C) {
       // _s, _e: absolute start and end while building, so a night merged from two sessions takes its bed and wake from both
       const n = {hrLow, asleep: asleep ?? inBed, inBedOnly: asleep == null, deep, core, rem, awake, unspec, stages: hasStages,
                  span: inBed, score, src, _s: s.start, _e: s.end};
+      if (nappish) { spare.push(n); continue; }
       const prev = nights[key];
-      if (!prev || n.score > prev.score) nights[key] = n;
+      if (!prev || n.score > prev.score) { if (prev) spare.push(prev); nights[key] = n; }
       else if (prev.score === n.score && prev.src === src) {
         // two sessions same night, same source. Back asleep within 3 hours: one broken night, so add up. Further
-        // apart: the longer one is the night and the shorter a nap, left out like the daytime naps above
-        if (Math.max(n._s - prev._e, prev._s - n._e) > 180 * 6e4) { if (n.span > prev.span) nights[key] = n; }
+        // apart: the longer one is the night and the shorter a nap
+        if (Math.max(n._s - prev._e, prev._s - n._e) > 180 * 6e4) { if (n.span > prev.span) { spare.push(prev); nights[key] = n; } else spare.push(n); }
         else {
           prev.asleep += n.asleep; prev.deep += deep; prev.core += core; prev.rem += rem; prev.awake += awake; prev.unspec += unspec; prev.span += inBed;
           prev._s = Math.min(prev._s, n._s); prev._e = Math.max(prev._e, n._e);
           prev.stages = prev.stages || n.stages; prev.inBedOnly = prev.inBedOnly && n.inBedOnly;
           if (n.hrLow != null) prev.hrLow = prev.hrLow == null ? n.hrLow : Math.min(prev.hrLow, n.hrLow);
         }
-      }
+      } else spare.push(n);
     }
+  }
+  /* naps: sleep of NAP_MIN minutes or more that's an hour clear of every night, so another device's copy of a night
+     (starting a little earlier, or ending a little later) isn't taken for one. Where two devices kept the same nap,
+     the better copy counts, the way nights are picked. A nap goes to the day it ended on, next to that morning's
+     night, as naps: [[start, end, minutes asleep]] (start and end in minutes after midnight) and nap: their total.
+     A day with naps but no night has nowhere to show them, so they're left out */
+  const NAP_MIN = 10, CLEAR = 60 * 6e4;
+  const cov = mergeIntervals(Object.values(nights).map(n => [n._s - CLEAR, n._e + CLEAR]));
+  const naps = [];
+  for (const n of spare.sort((a, b) => b.score - a.score || b.asleep - a.asleep)) {
+    if (n.asleep < NAP_MIN || overlaps(cov, n._s, n._e) || naps.some(o => n._s < o._e && o._s < n._e)) continue;
+    naps.push(n);
+  }
+  for (const n of naps.sort((a, b) => a._s - b._s)) {
+    const night = nights[new Date(n._e).toISOString().slice(0, 10)]; if (!night) continue;
+    const m = Math.round(n.asleep);
+    (night.naps || (night.naps = [])).push([Math.round(n._s / 6e4) % 1440, Math.round(n._e / 6e4) % 1440, m]);
+    night.nap = (night.nap || 0) + m;
   }
   for (const n of Object.values(nights)) {
     n.bed = (n._s / 6e4) % 1440; n.wake = (n._e / 6e4) % 1440;
@@ -2617,6 +2674,10 @@ function buildWorkouts(C) {
   const from = x => { let lo = 0, hi = hs.length; while (lo < hi) { const m = (lo + hi) >> 1; if (hs[m] < x) lo = m + 1; else hi = m; } return lo; };
   return kept.map(w => {
     const s = Math.round(w.s / 1000), e = Math.round(w.e / 1000), bins = [];
+    /* the heart rate over the workout, for the charts that show it over time: the average in each of up to 60 equal
+       steps (30 seconds at the least), 0 where there was no reading */
+    const step = Math.max(30, Math.ceil((e - s) / 60)), nSt = Math.max(1, Math.ceil((e - s) / step));
+    const tSum = new Float64Array(nSt), tW = new Float64Array(nSt);
     let tot = 0, sum = 0, peak = 0;
     for (let i = from(s * 256); i < hs.length; i++) {
       const at = Math.floor(hs[i] / 256); if (at > e) break;
@@ -2625,6 +2686,12 @@ function buildWorkouts(C) {
       const dt = Math.max(0, Math.min(Math.min(next, e) - at, 90));
       if (bpm > peak) peak = bpm;
       if (dt > 0) { const b = Math.max(0, Math.floor((bpm - HR_BIN0) / HR_BIN)); bins[b] = (bins[b] || 0) + dt; tot += dt; sum += dt * bpm; }
+      // its time shared out over the steps it runs across
+      for (let t0 = Math.max(at, s), t1 = Math.min(at + dt, e); t0 < t1;) {
+        const k = Math.min(nSt - 1, Math.floor((t0 - s) / step)), end = Math.min(t1, s + (k + 1) * step), part = end - t0;
+        if (part <= 0) break;
+        tSum[k] += part * bpm; tW[k] += part; t0 = end;
+      }
     }
     const o = {s, e, d: Math.round(w.dur * 10) / 10, t: w.type};
     if (w.indoor) o.in = 1;
@@ -2635,7 +2702,11 @@ function buildWorkouts(C) {
     if (hr > 0) o.hr = Math.round(hr);
     if (hx > 0) o.hx = Math.round(hx);
     // readings for a third of it at least (and two minutes), or the zones would speak for a few stray ones
-    if (tot >= Math.max(120, (e - s) / 3)) { const a = bins.findIndex(v => v > 0); o.h = [a, ...Array.from(bins.slice(a), v => Math.round(v || 0))]; }
+    if (tot >= Math.max(120, (e - s) / 3)) {
+      const a = bins.findIndex(v => v > 0); o.h = [a, ...Array.from(bins.slice(a), v => Math.round(v || 0))];
+      // [seconds a step, then each step's heart rate]
+      if (nSt > 1) o.ht = [step, ...Array.from(tSum, (v, k) => tW[k] > 0 ? Math.round(v / tW[k]) : 0)];
+    }
     return o;
   });
 }
@@ -2653,7 +2724,11 @@ function maxHeartRate(workouts, born, asOf) {
 }
 // what the browser kept, checked for shape before anything draws from it: a damaged row is left out
 const tidyWorkouts = (v, cut) => !Array.isArray(v) ? undefined : v.filter(w => w && typeof w === "object" && Number.isFinite(w.s) && Number.isFinite(w.e) && w.s >= 0 && w.e < 1e11 && w.e > w.s && w.d > 0
-  && typeof w.t === "string" && (!cut || wkKey(w) <= cut) && (w.h == null || (Array.isArray(w.h) && w.h.length > 1 && w.h.every(x => Number.isFinite(x) && x >= 0)))).sort((a, b) => a.s - b.s);
+  && typeof w.t === "string" && (!cut || wkKey(w) <= cut) && (w.h == null || (Array.isArray(w.h) && w.h.length > 1 && w.h.every(x => Number.isFinite(x) && x >= 0)))).map(w => {
+    // heart rate over time came later: a damaged one is dropped on its own, and the workout kept
+    if (w.ht != null && !(Array.isArray(w.ht) && w.ht.length > 2 && w.ht[0] > 0 && w.ht.every(x => Number.isFinite(x) && x >= 0 && x <= 260))) { const {ht, ...rest} = w; return rest; }
+    return w;
+  }).sort((a, b) => a.s - b.s);
 const tidyMax = m => m && m.v >= 100 && m.v <= 240 ? {v: Math.round(m.v), by: m.by === "age" ? "age" : "seen"} : null;
 function finalize(C) {
   const days = {};
@@ -2754,7 +2829,7 @@ function series(key) {
   if (!S.data) return [];
   if (S.cache && S.cache[key]) return S.cache[key];
   let out = [];
-  if (key === "sleep") out = Object.entries(S.data.sleep).map(([k, n]) => [keyToIdx(k), n.asleep]);
+  if (key === "sleep") out = Object.entries(S.data.sleep).map(([k, n]) => [keyToIdx(k), sleptOf(n)]);   // the night and the day's naps
   else if (key === "hrLow") out = Object.entries(S.data.sleep).filter(([, n]) => n.hrLow != null).map(([k, n]) => [keyToIdx(k), n.hrLow]);
   else if (key === "stress") out = (S.stress || []).map(s => [s.i, s.score]);
   else for (const [k, o] of Object.entries(S.data.days)) if (o[key] != null) out.push([keyToIdx(k), o[key]]);
@@ -2762,6 +2837,8 @@ function series(key) {
   (S.cache || (S.cache = {}))[key] = out;
   return out;
 }
+// a day's sleep in all: the night that ended that morning and the naps taken that day
+const sleptOf = n => n.asleep + (n.nap || 0);
 const mean = a => a.length ? a.reduce((t, v) => t + v, 0) / a.length : null;
 const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
 function between(ser, a, b) { return ser.filter(([i]) => i >= a && i <= b).map(p => p[1]); }
@@ -3253,6 +3330,7 @@ function redrawQuietly(fn) {
    forward they move to the left. opts.instant draws it straight away. */
 function swapPanel(panel, backSel, willHave, render, opts = {}) {
   if (!panel || !panel.isConnected) return;   // the page it was on has gone (another tab was opened)
+  if (typeof zvStop === "function") zvStop(panel);   // a zone chart switching style mid-animation
   if (panel._stopSlide) panel._stopSlide();   // any other move ends a "back to latest" slide where it is
   if (QUIET) { panel.dataset.swap = String(++SWAP); render(); return; }
   const tok = String(++SWAP); panel.dataset.swap = tok;   // only the latest request paints
@@ -3337,6 +3415,7 @@ function makeDayNav(o) {
    draws a card; dateFor(day) is the title row's date, when the card has one; finish() draws the latest day for
    real once the slide lands on it. Any other move on the card stops the slide (swapPanel). */
 function slideBack(panel, days, htmlFor, dateFor, finish) {
+  if (typeof zvStop === "function") zvStop(panel);
   if (days.length < 2 || reduceMotion() || !panel.animate) { finish(); return; }
   let path = days;
   if (path.length > 14) { const mid = path.slice(1, -1); path = [path[0], ...Array.from({length: 12}, (_, j) => mid[Math.floor(j * mid.length / 12)]), path[path.length - 1]]; }
@@ -3867,7 +3946,8 @@ function card(key, opts = {}) {
   const l = latest(key); if (!l) return "";
   // by today's date, not the last day in the export: an export from last week has no "yesterday". A night is dated by its morning
   const m = METRICS[key], today = keyToIdx(todayKey());
-  const when = key === "sleep" ? (l[0] === today ? "Last night" : fmtDate(l[0], true)) : l[0] === today ? "Today" : l[0] === today - 1 ? "Yesterday" : fmtDate(l[0], true);
+  // sleep's number takes in that day's naps, and says so
+  const when = key === "sleep" ? (l[0] === today ? "Last night" : fmtDate(l[0], true)) + (S.data.sleep[idxToKey(l[0])]?.nap ? " + nap" : "") : l[0] === today ? "Today" : l[0] === today - 1 ? "Yesterday" : fmtDate(l[0], true);
   // Sleep opens its own tab, and anything the Body tab charts opens Body; the rest open in Trends
   const go = key === "sleep" ? `data-tab="sleep"` : BODY_TAB.includes(key) ? `data-tab="body"` : `data-go="${key}"`;
   return `<button class="card" type="button" ${go}>
@@ -4400,18 +4480,19 @@ function pageSleep(el) {
         <div><span>Asleep</span><b>${fmtDur(n.asleep)}</b><small class="delta">${lenDelta(n)}</small></div>
         <div><span>Fell asleep</span><b>${fmtClock(n.bed)}</b><small class="delta">${clockDelta(n.bed, avgBed)}</small></div>
         <div><span>Woke up</span><b>${fmtClock(n.wake)}</b><small class="delta">${clockDelta(n.wake, avgWake)}</small></div>
+        ${n.nap && n.naps?.length ? `<div><span>${n.naps.length > 1 ? "Naps" : "Nap"}</span><b>${durShort(n.nap)}</b><small class="delta">${n.naps.length > 1 ? n.naps.length + " naps" : fmtClock(n.naps[0][0])} · ${fmtDur(sleptOf(n))} in all</small></div>` : ""}
       </div>
       ${stage}
       ${isLatest ? "" : `<p style="margin-top:12px"><button class="linkbtn" type="button" id="nBack">Back to ${ln.i === keyToIdx(todayKey()) ? "last night" : "most recent night"}</button></p>`}`;
   };
 
-  /* ---- card 2: same numbers the debt and consistency cards used ---- */
+  /* ---- card 2: same numbers the debt and consistency cards used. Naps pay back debt like the nights do ---- */
   const debtFor = goal => {
     const days = [];
     for (let d = ln.i - 6; d <= ln.i; d++) days.push({i: d, n: byI.get(d)});
     const had = days.filter(d => d.n);
-    const net = had.reduce((t, d) => t + (goal - d.n.asleep), 0);
-    return {had, debt: Math.max(0, net), avg: had.length ? mean(had.map(d => d.n.asleep)) : null};
+    const net = had.reduce((t, d) => t + (goal - sleptOf(d.n)), 0);
+    return {had, debt: Math.max(0, net), avg: had.length ? mean(had.map(d => sleptOf(d.n))) : null};
   };
   const adjBed = m => m < 720 ? m + 1440 : m;           // minutes after noon, so 11 PM and 1 AM sit next to each other
   const adjWake = (bed, wake) => { let w = wake + 1440; if (w - adjBed(bed) > 1440) w -= 1440; if (w < adjBed(bed)) w += 1440; return w; };
@@ -4433,7 +4514,7 @@ function pageSleep(el) {
   const VIEWS = [["dur", "Duration"], ["time", "Timing"], ["stages", "Stages"]];
 
   el.innerHTML = `
-    <div class="page-head"><div><h1>Sleep</h1><p class="sub">Nights are dated by the morning you woke up. Daytime naps are left out.</p></div></div>
+    <div class="page-head"><div><h1>Sleep</h1><p class="sub">Nights are dated by the morning you woke up. Naps count toward the day you took them.</p></div></div>
     <div class="panel" id="nightPanel" aria-live="polite" data-grow-from=".5"></div>
     <div class="panel" style="margin-top:16px">
       <div class="panel-head"><h2>Recent nights</h2><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-weight:600;font-size:14px">Your goal</span>${rangeSeg("goalSeg", S.sleepGoal, GOALS, "Sleep goal")}</div></div>
@@ -4510,16 +4591,22 @@ function pageSleep(el) {
       return `<b>${fmtDate(i, true)}</b>${body}`; },
     onPick: i => show(i === S.sleepSel ? null : i, true)};
 
+  // a day's naps stack on its night, and the night's colour is for the two together against the goal
   const durCfg = () => {
-    const g = S.sleepGoal / 60, over = [], under = [];
-    for (const n of nightsAll) (n.asleep >= S.sleepGoal ? over : under).push([n.i, n.asleep / 60]);
-    return {x: [x0, x1], height: 260, zero: true, label: "Sleep per night", selected: S.sleepSel,
-      series: [{pts: over, type: "bar", color: "--sleep"}, {pts: under, type: "bar", color: "--warn"},
+    const g = S.sleepGoal / 60, over = [], under = [], naps = [];
+    for (const n of nightsAll) {
+      (sleptOf(n) >= S.sleepGoal ? over : under).push([n.i, n.asleep / 60]);
+      if (n.nap) naps.push([n.i, n.nap / 60]);
+    }
+    return {x: [x0, x1], height: 260, zero: true, label: "Sleep per day", selected: S.sleepSel,
+      series: [{pts: over, type: "bar", stack: true, color: "--sleep"}, {pts: under, type: "bar", stack: true, color: "--warn"},
+               {pts: naps, type: "bar", stack: true, color: "--nap"},
                {pts: [[x0, g], [x1, g]], color: "--text-sub", dash: true, width: 2, gap: 1e9}],
       yFmt: (v, d) => num(v, d) + "h",
       tip: i => { const n = byI.get(i); if (!n) return "";
-        const d = n.asleep - S.sleepGoal;
-        return `<b>${fmtDate(i, true)}</b><div>${fmtDur(n.asleep)} ${n.inBedOnly ? "in bed" : "asleep"}</div><div style="opacity:.75">${Math.abs(d) < 1 ? "at goal" : durShort(d) + (d > 0 ? " over" : " under") + " goal"}</div>`; },
+        const d = sleptOf(n) - S.sleepGoal;
+        const naps = n.nap ? `<div>${fmtDur(n.nap)} ${n.naps?.length > 1 ? "napping" : "nap"}</div><div>${fmtDur(sleptOf(n))} in all</div>` : "";
+        return `<b>${fmtDate(i, true)}</b><div>${fmtDur(n.asleep)} ${n.inBedOnly ? "in bed" : "asleep"}${n.nap ? " at night" : ""}</div>${naps}<div style="opacity:.75">${Math.abs(d) < 1 ? "at goal" : durShort(d) + (d > 0 ? " over" : " under") + " goal"}</div>`; },
       onPick: i => show(i === S.sleepSel ? null : i, true)};
   };
 
@@ -4551,7 +4638,7 @@ function pageSleep(el) {
   }};
 
   const LEGENDS = {
-    dur: () => `<span><i style="background:var(--sleep)"></i>At or over goal</span><span><i style="background:var(--warn)"></i>Under goal</span><span><i class="dash"></i>Your goal</span>`,
+    dur: () => `<span><i style="background:var(--sleep)"></i>At or over goal</span><span><i style="background:var(--warn)"></i>Under goal</span>${inR.some(n => n.nap) ? `<span><i style="background:var(--nap)"></i>Naps</span>` : ""}<span><i class="dash"></i>Your goal</span>`,
     time: () => `<span><i style="background:var(--sleep)"></i>Asleep</span><span><i class="dash"></i>Your average bedtime and wake time</span>`,
     stages: () => [["Deep","--deep"],["Core","--core"],["REM","--rem"],["Awake","--awake"]].map(([l, c]) => `<span><i style="background:var(${c})"></i>${l}</span>`).join("") + (unstaged.length ? `<span><i style="background:var(--sleep);opacity:.5"></i>Asleep, no stages</span>` : ""),
   };
@@ -5028,6 +5115,220 @@ function zoneRows(z, max) {
   return `<div class="zrows" role="img" aria-label="${esc("Time in each heart rate zone: " + z.map((v, q) => `${ZONES[q][0]} ${zShort(v)}`).reverse().join(", "))}">${[4, 3, 2, 1, 0].map(q =>
     `<span class="zn"><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]}</span><span class="zr num">${zoneRange(q, max)}</span><span class="zb"><i style="width:${(z[q] / tot * 100).toFixed(1)}%;${z[q] > 0 ? "min-width:3px;" : ""}background:var(${ZONES[q][1]})"></i></span><b class="num">${zShort(z[q])}</b>`).join("")}</div>`;
 }
+/* ---- the zone charts, in the style you pick: one workout's in five styles, a range's total in three. The pick is
+   a setting like the others: kept in this browser, and with your account when you're signed in ---- */
+const ZONE_VIEW_KEY = STORE_KEY + "-zone-view";
+const ZV_ICON = {
+  ladder: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h7M2.5 12h3.5"/></svg>',
+  strip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="5" aria-hidden="true"><path d="M1.5 8h5M8 8h3M12.5 8h2"/></svg>',
+  donut: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3.2" aria-hidden="true"><circle cx="8" cy="8" r="5" stroke-dasharray="8 2.5 8 2.5 8 2.4"/></svg>',
+  line: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12l3-4.5 2.5 2.5 3.5-6 4 3"/></svg>',
+  ribbon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2.5 4v8M5.5 4v8M8.5 4v8M11 4v8M13.5 4v8"/></svg>'};
+const ZV_WK = [["ladder", "Bars"], ["strip", "Strip"], ["donut", "Donut"], ["line", "Heart rate over time"], ["ribbon", "Zone timeline"]];
+const ZV_TOT = [["strip", "Strip"], ["donut", "Donut"], ["ladder", "Bars"]];
+const zvOk = v => !!v && typeof v === "object" && ZV_WK.some(([k]) => k === v.wk) && ZV_TOT.some(([k]) => k === v.tot);
+let zoneViewMem = (() => { try { const v = JSON.parse(localStorage.getItem(ZONE_VIEW_KEY)); if (zvOk(v)) return {wk: v.wk, tot: v.tot}; } catch (e) {} return {wk: "ladder", tot: "strip"}; })();
+function setZoneView(part) {
+  zoneViewMem = {...zoneViewMem, ...part};
+  if (!S.sample) try { localStorage.setItem(ZONE_VIEW_KEY, JSON.stringify(zoneViewMem)); } catch (e) {}
+  savePrefs({zoneView: {...zoneViewMem}});
+}
+// the picker: one button, showing the style in use, that opens a short menu of the others
+const zvName = (opts, v) => (opts.find(([k]) => k === v) || opts[0])[1];
+const zvBtnInner = (opts, cur) => `<span class="zi">${ZV_ICON[cur]}</span><span class="zc">${CHEV_R}</span>`;
+const zvBtn = (id, kind, opts, cur) => `<button type="button" class="zvbtn" id="${id}" data-kind="${kind}" aria-haspopup="menu" aria-expanded="false"
+  aria-label="Chart style: ${zvName(opts, cur)}" title="Chart style">${zvBtnInner(opts, cur)}</button>`;
+/* The menu: one for the whole page, a popover (so no card clips it, and a tap outside or Escape closes it by itself).
+   open(btn, opts, cur, pick, hint) lists the styles under the button, the one in use ticked; hint(v) can add a
+   short note to a style. Picking one calls pick(v). */
+const ZVM = {el: null, btn: null, pick: null, shut: {at: 0, btn: null}};
+const zvmIsOpen = () => !!ZVM.el && (ZVM.el.matches(":popover-open") || (!ZVM.el.hasAttribute("popover") && !ZVM.el.hidden));
+function zvmEl() {
+  if (ZVM.el) return ZVM.el;
+  const m = document.createElement("div");
+  m.className = "fmenu zvmenu"; m.setAttribute("role", "menu"); m.setAttribute("aria-label", "Chart style");
+  const pop = typeof m.showPopover === "function";
+  if (pop) m.setAttribute("popover", "auto"); else m.hidden = true;
+  document.body.appendChild(m);
+  m.addEventListener("click", e => {
+    const o = e.target.closest(".fopt"); if (!o) return;
+    const f = ZVM.pick; closeZvMenu(true); if (f) f(o.dataset.v);
+  });
+  m.addEventListener("keydown", e => {
+    const os = [...m.querySelectorAll(".fopt")], i = os.indexOf(document.activeElement), go = j => { e.preventDefault(); os[(j + os.length) % os.length].focus(); };
+    if (e.key === "ArrowDown") go(i + 1); else if (e.key === "ArrowUp") go(i - 1);
+    else if (e.key === "Home") go(0); else if (e.key === "End") go(os.length - 1);
+    else if (e.key === "Tab") { e.preventDefault(); closeZvMenu(true); }
+    else if (e.key === "Escape" && !pop) { e.preventDefault(); closeZvMenu(true); }
+  });
+  // closed by a tap outside or Escape: tidy up after it
+  if (pop) m.addEventListener("toggle", e => { if (e.newState === "closed" && ZVM.btn) closeZvMenu(m.contains(document.activeElement) || document.activeElement === document.body, true); });
+  else document.addEventListener("pointerdown", e => { if (ZVM.btn && !m.contains(e.target) && !ZVM.btn.contains(e.target)) closeZvMenu(false, true); }, true);
+  /* it stays with its button as the page scrolls or the window changes size (a phone's toolbar sliding away does
+     both), and closes once the button has gone off the screen or out of the page */
+  const follow = () => {
+    if (!ZVM.btn) return;
+    const r = ZVM.btn.getBoundingClientRect();
+    if (!ZVM.btn.isConnected || r.bottom < 0 || r.top > innerHeight || !r.width) closeZvMenu(false); else zvmPlace();
+  };
+  addEventListener("resize", follow); addEventListener("scroll", follow, {passive: true});
+  return ZVM.el = m;
+}
+/* outside: closed by a tap outside it (or Escape). Only that is noted, so the tap on its own button that closed it
+   doesn't open it straight back up; a pick or a second tap on the button can be followed by another right away */
+function closeZvMenu(refocus, outside = false) {
+  const b = ZVM.btn; ZVM.btn = null; ZVM.pick = null;
+  if (zvmIsOpen()) { if (ZVM.el.hasAttribute("popover")) ZVM.el.hidePopover(); else ZVM.el.hidden = true; }
+  if (b) { b.setAttribute("aria-expanded", "false"); ZVM.shut = outside ? {at: performance.now(), btn: b} : {at: 0, btn: null}; if (refocus && b.isConnected) b.focus({preventScroll: true}); }
+}
+function openZvMenu(btn, opts, cur, pick, hint = () => "") {
+  const m = zvmEl();
+  m.innerHTML = `<div class="zvm-h" aria-hidden="true">Chart style</div>` + opts.map(([v, l]) => { const h = hint(v);
+    return `<button type="button" role="menuitemradio" class="fopt" data-v="${v}" aria-checked="${v === cur}" tabindex="-1">${CHECK}<span class="zi">${ZV_ICON[v]}</span><span>${l}</span>${h ? `<small>${h}</small>` : ""}</button>`; }).join("");
+  if (m.hasAttribute("popover")) m.showPopover(); else m.hidden = false;
+  ZVM.btn = btn; ZVM.pick = pick; btn.setAttribute("aria-expanded", "true");
+  zvmPlace();
+  (m.querySelector('[aria-checked="true"]') || m.querySelector(".fopt")).focus({preventScroll: true});
+}
+// under its button, the right edges lined up; above it when there's no room below
+function zvmPlace() {
+  const m = ZVM.el, b = ZVM.btn; if (!m || !b) return;
+  const r = b.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + "px";
+  const below = innerHeight - r.bottom - 12 >= mh || r.top < mh + 12;
+  m.style.top = (below ? r.bottom + 4 : r.top - mh - 4) + "px";
+  m.style.transformOrigin = below ? "top right" : "bottom right";
+}
+/* a click on a style button: opens its menu, or closes it when it's already open (the tap that just closed it from
+   outside doesn't open it straight back up) */
+function zvToggle(btn, opts, cur, pick, hint) {
+  if (ZVM.btn === btn) { closeZvMenu(true); return; }
+  if (ZVM.shut.btn === btn && performance.now() - ZVM.shut.at < 350) return;
+  if (ZVM.btn) closeZvMenu(false);
+  openZvMenu(btn, opts, cur, pick, hint);
+}
+// the zone a heart rate falls in, for a maximum
+const zoneOf = (bpm, max) => { let q = 0; for (let j = 1; j < 5; j++) if (bpm >= ZONE_FROM[j] * max) q = j; return q; };
+// the key under a chart: each zone's time
+const zoneLeg = z => `<div class="zleg">${z.map((v, q) => `<span><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]} <b>${zShort(v)}</b></span>`).join("")}</div>`;
+const zLabel = z => "Time in each heart rate zone: " + z.map((v, q) => `${ZONES[q][0]} ${zShort(v)}`).reverse().join(", ");
+// the total in the middle of a donut: "32 min", or "5h 41m in zones"
+const zMid = v => v >= 60 ? [fmtDur(v), "in zones"] : [String(Math.round(v)), "min"];
+// the zones as a ring, zone 1 at the top and on round, with each one's time and share beside it
+function zoneDonut(z) {
+  const tot = z.reduce((a, v) => a + v, 0) || 1, r = 52, C = 2 * Math.PI * r, gap = z.filter(v => v > 0).length > 1 ? 2.5 : 0, [mv, mu] = zMid(tot);
+  let off = 0, arcs = "";
+  z.forEach((v, q) => {
+    if (!(v > 0)) return;
+    const L = v / tot * C;
+    arcs += `<circle cx="66" cy="66" r="${r}" style="stroke:var(${ZONES[q][1]})" stroke-width="16" stroke-dasharray="${Math.max(L - gap, .8).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+    off += L;
+  });
+  return `<div class="zdonut" role="img" aria-label="${esc(zLabel(z))}"><div class="zd-ring"><svg viewBox="0 0 132 132" fill="none" aria-hidden="true"><circle cx="66" cy="66" r="${r}" style="stroke:var(--surface-2)" stroke-width="16"/>${arcs}</svg>
+    <div class="zd-mid"><b${mv.length > 4 ? ' style="font-size:16px"' : ""}>${mv}</b><span>${mu}</span></div></div>
+    <div class="zd-leg">${[4, 3, 2, 1, 0].map(q => `<span class="zn"><i style="background:var(${ZONES[q][1]})"></i>${ZONES[q][0]}</span><span></span><b>${zShort(z[q])}</b><em>${Math.round(z[q] / tot * 100)}%</em>`).join("")}</div></div>`;
+}
+// along the bottom of the two charts over time: the start, halfway and the end
+const zAxis = w => `<div class="zx" aria-hidden="true"><span>0</span><span>${Math.round(w.d / 2)} min</span><span>${minTxt(w.d)}</span></div>`;
+// a workout's heart rate over time, over the bands of the zones; its highest point marked
+function zoneLine(w, max) {
+  const v = w.ht.slice(1), n = v.length, got = v.filter(x => x > 0);
+  if (got.length < 2) return null;
+  const lo0 = Math.min(...got), hi0 = Math.max(...got);
+  const yLo = Math.max(40, Math.floor((lo0 - 6) / 10) * 10), yHi = Math.ceil((hi0 + 6) / 10) * 10;
+  const X = k => (k + .5) / n * 100, Y = b => (yHi - b) / (yHi - yLo) * 100;
+  let bands = "", labs = "", lastTop = -99;
+  for (let q = 0; q < 5; q++) {
+    const lo = q ? ZONE_FROM[q] * max : 0, hi = q < 4 ? ZONE_FROM[q + 1] * max : 999, a = Math.max(lo, yLo), b = Math.min(hi, yHi);
+    if (b > a) bands += `<rect x="0" width="100" y="${Y(b).toFixed(2)}" height="${(Y(a) - Y(b)).toFixed(2)}" style="fill:var(${ZONES[q][1]})" fill-opacity=".16"/>`;
+  }
+  // each zone's lower edge, written up the side (none so close to the last that they'd overlap)
+  for (let q = 4; q >= 1; q--) {
+    const b = Math.round(ZONE_FROM[q] * max); if (b <= yLo || b >= yHi) continue;
+    const top = Y(b); if (top - lastTop < 11) continue;
+    labs += `<span class="yl" style="top:${top.toFixed(1)}%">${b}</span>`; lastTop = top;
+  }
+  let d = "", pen = false;
+  v.forEach((x, k) => { if (x > 0) { d += `${pen ? "L" : "M"}${X(k).toFixed(2)} ${Y(x).toFixed(2)}`; pen = true; } else pen = false; });
+  const pk = v.indexOf(hi0);
+  return `<div class="zplot" role="img" aria-label="${esc(`Heart rate over the workout, from ${lo0} to ${hi0} bpm, over the zones. ${zLabel(wkZones(w, max))}`)}"><div class="zl-box">${labs}
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${bands}<path d="${d}" fill="none" style="stroke:var(--text)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+      <span class="zdot" style="left:${X(pk).toFixed(2)}%;top:${Y(hi0).toFixed(2)}%" title="Highest, about ${hi0} bpm"></span></div>${zAxis(w)}</div>`;
+}
+// a workout as a timeline, each stretch coloured by its zone (blank where the watch took no readings)
+function zoneRibbon(w, max) {
+  const v = w.ht.slice(1); if (!v.some(x => x > 0)) return null;
+  const runs = [];
+  for (const x of v) { const k = x > 0 ? zoneOf(x, max) : -1, l = runs[runs.length - 1]; if (l && l[0] === k) l[1]++; else runs.push([k, 1]); }
+  return `<div class="zrib" role="img" aria-label="${esc("Zones through the workout, start to end: " + runs.filter(([k]) => k >= 0).map(([k, c]) => `${ZONES[k][0]} ${minTxt(c * w.ht[0] / 60)}`).join(", "))}">${runs.map(([k, c]) =>
+    `<i style="flex:${c} 0 0;background:var(${k < 0 ? "--surface-2" : ZONES[k][1]})"></i>`).join("")}</div>${zAxis(w)}`;
+}
+/* Switching a zone chart's style: the card eases from its old height to its new one, the old chart fades out where
+   it was (a lifeless copy of it, laid over the spot), and the new one fades up and draws in. A switch partway through
+   another starts from wherever that one had got to. Mid-swipe, or with reduce motion on, it just swaps. */
+const ZV_MS = 340, ZV_EASE = "cubic-bezier(.2,.8,.2,1)";
+// ends a switch's animations on a card where they are: before the card is drawn again, swiped or slid
+function zvStop(panel) {
+  if (!panel) return;
+  let as = []; try { as = panel.getAnimations({subtree: true}); } catch (e) {}
+  as.filter(a => a.id === "zv").forEach(a => a.cancel());
+  panel.querySelectorAll(".zv-ghost").forEach(g => g.remove());
+  if (panel.dataset.zv) { panel.style.overflow = ""; delete panel.dataset.zv; }
+}
+// the new chart drawing in: strips and timelines wipe in from the left, bars grow out, the ring sweeps round
+function zvDrawIn(body) {
+  const o = {duration: 520, delay: 110, easing: ZV_EASE, fill: "backwards", id: "zv"};
+  body.querySelectorAll(".stagebar, .zrib, .zl-box svg").forEach(el => el.animate([{clipPath: "inset(0 100% 0 0)"}, {clipPath: "inset(0 0% 0 0)"}], o));
+  body.querySelectorAll(".zdot").forEach(el => el.animate([{opacity: 0, transform: "scale(.3)"}, {opacity: 1, transform: "none"}], {...o, duration: 240, delay: 520}));
+  body.querySelectorAll(".zb i").forEach((el, j) => el.animate([{transform: "scaleX(0)"}, {transform: "none"}], {...o, delay: 110 + j * 40}));
+  body.querySelectorAll(".zd-ring circle[stroke-dasharray]").forEach(c => {
+    const [L, C] = c.getAttribute("stroke-dasharray").split(" ");
+    c.animate([{strokeDasharray: `0 ${C}`}, {strokeDasharray: `${L} ${C}`}], o);
+  });
+}
+function zvSwap(panel, body, html) {
+  if (!panel || !body.animate || reduceMotion() || panel.querySelector(".swipe-ghost, .swipe-strip")) { zvStop(panel); body.innerHTML = html; return; }
+  const host = body.parentElement; host.classList.add("zv-host");
+  // read before anything stops: a card still easing from the last switch starts from the height it's at now
+  const h0 = panel.getBoundingClientRect().height, op0 = +getComputedStyle(body).opacity;
+  const hr = host.getBoundingClientRect(), br = body.getBoundingClientRect(), old = body.innerHTML;
+  zvStop(panel);
+  const ghost = document.createElement("div");
+  ghost.className = "zv-ghost"; ghost.inert = true; ghost.setAttribute("aria-hidden", "true");
+  ghost.style.cssText = `position:absolute;left:${br.left - hr.left - host.clientLeft}px;top:${br.top - hr.top - host.clientTop}px;width:${br.width}px;pointer-events:none`;
+  ghost.innerHTML = old;
+  for (const n of ghost.querySelectorAll("[id]")) n.removeAttribute("id");
+  body.innerHTML = html;
+  host.appendChild(ghost);
+  const h1 = panel.getBoundingClientRect().height, tok = String(performance.now());
+  if (Math.abs(h1 - h0) >= 1) {
+    panel.dataset.zv = tok; panel.style.overflow = "hidden";
+    const a = panel.animate([{height: h0 + "px"}, {height: h1 + "px"}], {duration: ZV_MS, easing: ZV_EASE, id: "zv"});
+    a.onfinish = a.oncancel = () => { if (panel.dataset.zv === tok) { panel.style.overflow = ""; delete panel.dataset.zv; } };
+  }
+  const g = ghost.animate([{opacity: op0, transform: "none"}, {opacity: 0, transform: "translateY(-4px) scale(.985)"}], {duration: 130, easing: "ease-in", fill: "forwards", id: "zv"});
+  g.onfinish = g.oncancel = () => ghost.remove();
+  body.animate([{opacity: 0, transform: "translateY(6px)"}, {opacity: 1, transform: "none"}], {duration: 280, delay: 100, easing: ZV_EASE, fill: "backwards", id: "zv"});
+  zvDrawIn(body);
+}
+// one workout's zones in the style picked; the two over time fall back to the strip when there's no heart rate over time
+function zoneWkView(w, z, max) {
+  const v = zoneViewMem.wk, note = t => `<p class="znote">${t}</p>`, base = `Zones are set from your ${max} bpm maximum.`;
+  if (v === "ladder") return zoneRows(z, max) + note(base);
+  if (v === "donut") return zoneDonut(z) + note(base);
+  if (v === "line" || v === "ribbon") {
+    const out = w.ht ? (v === "line" ? zoneLine(w, max) : zoneRibbon(w, max)) : null;
+    if (out) return out + zoneLeg(z) + note(base);
+    return zoneBar(z) + zoneLeg(z) + note(w.ht ? "Too few heart rate readings to show this workout over time, so it's shown as a strip."
+      : "This workout was saved before Pulse kept heart rate over time, so it's shown as a strip. Upload a new export to see it.");
+  }
+  return zoneBar(z) + zoneLeg(z) + note(base);
+}
+// a range's total time in each zone, in the style picked
+function zoneTotView(z, max) {
+  const v = zoneViewMem.tot;
+  return v === "donut" ? `<div style="margin-top:12px">${zoneDonut(z)}</div>` : v === "ladder" ? `<div style="margin-top:10px">${zoneRows(z, max)}</div>` : zoneBar(z) + zonePct(z);
+}
 /* How hard a workout's minutes were: zones 1–2, zone 3, zones 4–5. Its zone minutes are stretched to its length, so
    the parts add up to its minutes of exercise; one with no heart rate to place it is all "none".
    [key, name, colour, the zones it covers] */
@@ -5056,6 +5357,7 @@ function pageWorkouts(el) {
     return;
   }
   const max = hrMaxNow(), mh = S.data.hrMax, us = S.units === "us";
+  if (ZVM.btn) closeZvMenu(false);
   const lw = list[list.length - 1], byS = new Map(list.map(w => [w.s, w])), q = s => el.querySelector(s);
   if (S.wkSel != null && !byS.has(S.wkSel)) S.wkSel = null;
   const last = keyToIdx(S.data.last), today = keyToIdx(todayKey()), lastYear = new Date(last * DAY).getUTCFullYear();
@@ -5128,7 +5430,7 @@ function pageWorkouts(el) {
   const cardHTML = s => {
     const w = byS.get(s) || lw, pos = list.indexOf(w), z = wkZones(w, max), hard = wkHard(w, max), late = hard ? wkLate(w) : null;
     const zones = !max ? `<p class="explain" style="margin:14px 0 0">No heart rate zones: Pulse couldn't tell your maximum heart rate from this export. Setting your date of birth in the Health app fixes that.</p>`
-      : z && z.some(v => v > 0) ? `<div class="zhead"><h3>Heart rate zones</h3><span>bpm, of your ${max} maximum</span></div>${zoneRows(z, max)}`
+      : z && z.some(v => v > 0) ? `<div class="zhead zpick"><h3>Heart rate zones</h3>${zvBtn("zvWk", "wk", ZV_WK, zoneViewMem.wk)}</div><div id="zvWkBody">${zoneWkView(w, z, max)}</div>`
       : `<p class="explain" style="margin:14px 0 0">${w.hr ? "Too few heart rate readings were taken during this workout to split it into zones." : "No heart rate was recorded for this workout, so it has no zones."}</p>`;
     return `<div class="panel-head"><h2>${w === lw ? "Latest workout" : "Selected workout"}</h2>
         <div class="nightnav"><span class="date">${whenOf(w)}</span>
@@ -5143,7 +5445,9 @@ function pageWorkouts(el) {
   /* ---- your training: the range's totals, the weeks, and cardio fitness beside them. It draws itself, so picking
      another range draws this card again and nothing above it ---- */
   const tile = (label, v, note) => `<div><span>${label}</span><b>${v}</b>${note ? `<small class="delta">${note}</small>` : ""}</div>`;
+  let zvTotZ = null;   // the range's time in each zone, as last drawn: what a new chart style is drawn from
   const drawTrain = () => {
+    zvStop(q("#wkTrain"));
     const [x0, x1] = xRange(S.ranges.workouts);
     const inR = list.filter(w => wkIdx(w) >= x0 && wkIdx(w) <= x1);
     // the "a week" figures: the workouts from the first one with heart rate on (or the start of the range, if that's later), over those weeks
@@ -5180,7 +5484,8 @@ function pageWorkouts(el) {
         <div class="chart" id="wkVo2"></div>
       </div>
     </div>
-    ${zt.some(v => v > 0) ? `<h3 style="margin:20px 0 0">Time in each zone</h3>${zoneBar(zt)}${zonePct(zt)}` : ""}`;
+    ${zt.some(v => v > 0) ? `<div class="zhead zpick" style="margin:20px 0 0"><h3>Time in each zone</h3>${zvBtn("zvTot", "tot", ZV_TOT, zoneViewMem.tot)}</div><div id="zvTotBody">${zoneTotView(zt, max)}</div>` : ""}`;
+    zvTotZ = zt;
     chart(q("#wkWeeks"), {x: [cx0, x1], height: 180, zero: true, label: "Minutes of cardio each week",
       series: WK_PARTS.map(([k, , col]) => ({pts: wks.filter(([, o]) => o[k] > 0).map(([b, o]) => [b, o[k]]), type: "bar", stack: true, every: 7, color: col})),
       yFmt: (v, d) => num(v, d),
@@ -5252,6 +5557,26 @@ function pageWorkouts(el) {
     show(+b.dataset.wk);
     const card = q("#wkDay"), r = card.getBoundingClientRect();
     if (r.top < 60 || r.top > innerHeight * .45) card.scrollIntoView({behavior: reduceMotion() ? "auto" : "smooth", block: "start"});
+  });
+  /* another style for a zone chart, from the menu under its button: only that chart is drawn again. The style
+     buttons are found when tapped, since the cards draw them again with every workout and range */
+  const restyle = (kind, v) => {
+    const opts = kind === "wk" ? ZV_WK : ZV_TOT; if (!opts.some(([k]) => k === v)) return;
+    setZoneView({[kind]: v});
+    const btn = q(kind === "wk" ? "#zvWk" : "#zvTot");
+    if (btn) { btn.innerHTML = zvBtnInner(opts, v); btn.setAttribute("aria-label", "Chart style: " + zvName(opts, v)); }
+    if (kind === "wk") { const w = byS.get(S.wkSel) || lw, body = q("#zvWkBody"); if (body) zvSwap(q("#wkDay"), body, zoneWkView(w, wkZones(w, max), max)); }
+    else { const body = q("#zvTotBody"); if (body && zvTotZ) zvSwap(q("#wkTrain"), body, zoneTotView(zvTotZ, max)); }
+  };
+  q("#wkDay").addEventListener("click", e => {
+    const b = e.target.closest("#zvWk"); if (!b) return;
+    // the two over time need heart rate over time, which workouts saved before it was kept don't have
+    const w = byS.get(S.wkSel) || lw, needs = v => (v === "line" || v === "ribbon") && !w.ht ? "Needs a new upload" : "";
+    zvToggle(b, ZV_WK, zoneViewMem.wk, v => restyle("wk", v), needs);
+  });
+  q("#wkTrain").addEventListener("click", e => {
+    const b = e.target.closest("#zvTot"); if (!b) return;
+    zvToggle(b, ZV_TOT, zoneViewMem.tot, v => restyle("tot", v));
   });
   // another range: this card alone is drawn again, and the control stays where it was tapped
   bindSeg("wkRange", v => {
@@ -5386,7 +5711,7 @@ function pageData(el) {
           <li>When your iPhone and Apple Watch both count steps or calories at the same time, Pulse counts the watch and skips the phone, so nothing gets counted twice.</li>
           <li>Heart rate, HRV, breathing rate, and blood oxygen are averaged for each day. Weight uses the last weigh-in of the day.</li>
           <li>Each workout comes with its own totals: how long, active calories, distance, and the average and highest heart rate. The time in each heart rate zone is counted from the heart rate readings taken while it ran.</li>
-          <li>A night's sleep is dated by the morning you woke up. Waking up and falling back asleep within 3 hours counts as one night. Naps between noon and 8 PM are left out, and so is any shorter sleep more than 3 hours from the night's main sleep.</li>
+          <li>A night's sleep is dated by the morning you woke up. Waking up and falling back asleep within 3 hours counts as one night. Other sleep of 10 minutes or more, at least an hour away from a night, counts as a nap on the day it ended, and adds to that day's sleep and sleep debt. Bedtime, wake time and stages are the night's alone.</li>
           <li>Before Apple Watch, the iPhone only knew when you were in bed, not when you were asleep, so older sleep numbers can look longer.</li>
           <li>The day you export is usually incomplete, so weekly comparisons stop the day before.</li>
           ${HOST ? `<li>Signed in to a Pulse account, your supplement list, its check-offs, your tags and your settings (theme, Summary cards, goals, units) are saved to that account, so they show up on every device where you sign in. Only you can read them. Your Health data isn't sent: it stays in this browser, kept apart for each account that signs in here.</li>
@@ -7009,7 +7334,7 @@ const TGD = () => S.sample && SMP ? SMP : TG;
    put back on the way out, so leaving the sample finds everything exactly as it was. */
 let SMP_PREFS = null;
 function enterSample() {
-  SMP_PREFS = {theme: themeId, units: S.units, sleepGoal: S.sleepGoal, bodyGoal: bodyGoalMem, askRemove: askRemoveMem, open: [...TG_OPEN], grp: {...grpClosed}, stressChart: stressChartOpen, clockFlipped, debtFlipped, sumOrder: sumOrderMem, sumWide: sumWideMem};
+  SMP_PREFS = {theme: themeId, units: S.units, sleepGoal: S.sleepGoal, bodyGoal: bodyGoalMem, askRemove: askRemoveMem, open: [...TG_OPEN], grp: {...grpClosed}, stressChart: stressChartOpen, clockFlipped, debtFlipped, sumOrder: sumOrderMem, sumWide: sumWideMem, zoneView: {...zoneViewMem}};
 }
 function exitSample() {
   if (S.sample && SMP_PREFS) {
@@ -7017,6 +7342,7 @@ function exitSample() {
     themeId = p.theme; applyTheme(themeId);
     S.units = p.units; S.sleepGoal = p.sleepGoal; bodyGoalMem = p.bodyGoal; askRemoveMem = p.askRemove;
     TG_OPEN.clear(); p.open.forEach(x => TG_OPEN.add(x)); Object.assign(grpClosed, p.grp); stressChartOpen = p.stressChart; clockFlipped = p.clockFlipped; debtFlipped = p.debtFlipped; sumOrderMem = p.sumOrder; sumWideMem = p.sumWide;
+    if (zvOk(p.zoneView)) zoneViewMem = {...p.zoneView};
   }
   SMP_PREFS = null; S.sample = false; SMP = null;
 }
@@ -7629,6 +7955,7 @@ function localPrefs() {
   if (lsGet(SUM_ORDER_KEY) != null) o.sumOrder = sumOrderMem;
   if (lsGet(SUM_WIDE_KEY) != null) o.sumWide = sumWideMem;
   if (lsGet(STRESS_CHART_KEY) != null) o.stressChart = stressChartOpen;
+  if (lsGet(ZONE_VIEW_KEY) != null) o.zoneView = {...zoneViewMem};
   if (clockFlipped) o.clockFlipped = true;
   if (debtFlipped) o.debtFlipped = true;
   if (lsGet(OPEN_KEY) != null) o.openCats = [...TG_OPEN];
@@ -7665,6 +7992,10 @@ function applyPrefs(p) {
   }
   if (ok("stressChart") && typeof p.stressChart === "boolean") {
     if (sm) sm.stressChart = p.stressChart; else redraw = set(stressChartOpen, p.stressChart, () => { stressChartOpen = p.stressChart; lsPut(STRESS_CHART_KEY, p.stressChart ? "1" : "0"); }) || redraw;
+  }
+  if (ok("zoneView") && zvOk(p.zoneView)) {
+    const zv = {wk: p.zoneView.wk, tot: p.zoneView.tot};
+    if (sm) sm.zoneView = zv; else redraw = set(zoneViewMem, zv, () => { zoneViewMem = zv; lsPut(ZONE_VIEW_KEY, JSON.stringify(zv)); }) || redraw;
   }
   if (p.debtFlipped === true) { if (sm) sm.debtFlipped = true; else if (!debtFlipped) { debtFlipped = true; lsPut(DEBT_FLIP_KEY, "1"); } }
   if (p.clockFlipped === true) { if (sm) sm.clockFlipped = true; else if (!clockFlipped) { clockFlipped = true; lsPut(CLOCK_FLIP_KEY, "1"); } }
@@ -9276,6 +9607,9 @@ function makeSample(mode = "normal") {
     h.salty = p(0.05 * WF + (h.nightOut ? 0.3 : 0) + (holidays ? 0.2 : 0));
     h.spicy = p(0.04 * WF + (h.lateMeal ? 0.25 : 0));
     h.nap = (short && p(0.3)) || (sv > 0.5 && p(0.5)) || (weekend && p(0.06));
+    /* the nap itself, kept by the watch when it's worn: some time in the afternoon, 20 minutes to an hour and a half.
+       Its times come from the day's number, not the dice, so the rest of the sample is the same with or without it */
+    if (h.nap && watch && sleep[k] && !sleep[k].inBedOnly) { const len = 20 + (j * 37) % 70, at = 13 * 60 + (j * 53) % 180; sleep[k].naps = [[at, at + len + 4, len]]; sleep[k].nap = len; }
     h.sore = (inj && p(0.5)) || ((prev.hike || (prev.ran && prev.long)) && p(0.5));
     h.long = ran && steps > 17000;
     h.lateWorkout = (ran || lift) && !weekend && p(0.18); h.lateRun = ran && h.lateWorkout;
@@ -9380,11 +9714,11 @@ function makeSample(mode = "normal") {
      that night's sleep began; the rest are before the day starts or after it, or mid-morning at a weekend. */
   const hrMax = 220 - int(19, 46), workouts = [], wkDay = {};
   const mkW = (i, at, dur, type, avg, burn, more = {}) => {
-    const bins = [];
-    // the time at each heart rate: around the average, starting low while warming up
-    for (let m = 0; m < dur; m++) { const b = Math.floor((clamp(avg + gauss() * 8 - (m < 5 ? (5 - m) * 5 : 0), 60, hrMax - 2) - HR_BIN0) / HR_BIN); bins[b] = (bins[b] || 0) + 60; }
+    const bins = [], perMin = [];
+    // the time at each heart rate: around the average, starting low while warming up (kept minute by minute too, as the heart rate over time)
+    for (let m = 0; m < dur; m++) { const v = clamp(avg + gauss() * 8 - (m < 5 ? (5 - m) * 5 : 0), 60, hrMax - 2), b = Math.floor((v - HR_BIN0) / HR_BIN); bins[b] = (bins[b] || 0) + 60; perMin.push(Math.round(v)); }
     const a = bins.findIndex(v => v > 0), s = i * 86400 + Math.round(at * 60);
-    workouts.push({s, e: s + dur * 60, d: dur, t: type, c: Math.round(dur * burn), hr: Math.round(avg - 2), hx: Math.round(Math.min(hrMax - 1, avg + uni(14, 24))), h: [a, ...Array.from(bins.slice(a), v => v || 0)], ...more});
+    workouts.push({s, e: s + dur * 60, d: dur, t: type, c: Math.round(dur * burn), hr: Math.round(avg - 2), hx: Math.round(Math.min(hrMax - 1, avg + uni(14, 24))), h: [a, ...Array.from(bins.slice(a), v => v || 0)], ...(dur > 1 ? {ht: [60, ...perMin]} : {}), ...more});
     (wkDay[idxToKey(i)] || (wkDay[idxToKey(i)] = [])).push([at, dur, avg]);
   };
   for (let j = 0; j < N; j++) {
