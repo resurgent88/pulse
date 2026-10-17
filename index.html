@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-nZp/gnZQpcNJhIcLVI8zOCopdM4Cqg8jwhDMqPKUrw8=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-es0a2VRjdy9hqj0vnf34yrwi4F6QnpRBQflHpAPMpuY=' 'sha256-oWzJMOrrEdt6RcMc8B5uQnBt3QLcHbLkz2PyW/r+2LM=' 'sha256-Sv3otyUsegXSVPvOmC4FrCIueZMD6T42LYcm6TR6LQw=' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com; frame-src https://pulse-a182a.firebaseapp.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -4192,15 +4192,21 @@ function arrangeSummary(el) {
     if (j < 0 || j >= keys.length) return;
     keys.splice(j, 0, keys.splice(i, 1)[0]); place(keys); c.focus();
   });
+  /* the finger (or mouse) a drag is following. A second finger that lands meanwhile is left out: it doesn't start a
+     drag of its own, move the card or drop it. One whose card has gone from the page no longer counts */
+  let held = null;
   grid.addEventListener("pointerdown", e => {
     const me = e.target.closest(".card[data-card]"); if (!sumArrange || !me || e.button > 0 || e.target.closest(".cbtn")) return;
+    if (held && held.isConnected) return;
     downOnGrip = !!e.target.closest(".cgrip"); dragged = false;
     const cs = cardsNow(), from = cs.indexOf(me); if (cs.length < 2) return;
     e.preventDefault(); me.setPointerCapture(e.pointerId); me.focus({preventScroll: true});
+    const pid = e.pointerId; held = me;
     const at = cs.map(c => c.getBoundingClientRect()), x0 = e.clientX, y0 = e.clientY;
     let to = from;
     grid.classList.add("sorting"); me.classList.add("dragging");
     const move = ev => {
+      if (ev.pointerId !== pid) return;
       const dx = ev.clientX - x0, dy = ev.clientY - y0, r = at[from];
       if (Math.abs(dx) + Math.abs(dy) > 4) dragged = true;
       me.style.transform = `translate(${dx}px,${dy}px)`;
@@ -4215,8 +4221,8 @@ function arrangeSummary(el) {
       });
     };
     let done = false;
-    const end = () => {
-      if (done) return; done = true;
+    const end = ev => {
+      if (done || ev.pointerId !== pid) return; done = true; held = null;
       for (const t of ["pointermove", "pointerup", "pointercancel", "lostpointercapture"]) me.removeEventListener(t, t === "pointermove" ? move : end);
       const moved = new Map(cs.map(c => [c.dataset.card, c.getBoundingClientRect()]));
       grid.classList.remove("sorting"); me.classList.remove("dragging");
@@ -8558,23 +8564,26 @@ function tagBrowser(root, getKey, setKey, opts = {}) {
   });
   /* the handle with a pointer: the row follows it, the rows it passes slide out of the way, and letting go puts it
      in its new place */
+  let held = null;   // the finger a row drag is following: a second one is left out, as on the Summary cards
   list.addEventListener("pointerdown", e => {
-    const g = e.target.closest("[data-grip]"); if (!g || e.button > 0) return;
+    const g = e.target.closest("[data-grip]"); if (!g || e.button > 0 || (held && held.isConnected)) return;
     const box = g.closest("[data-sort]"), rows = sortRows(g), me = g.closest(".drow"), from = rows.indexOf(me);
     if (rows.length < 2) return;
     e.preventDefault(); g.setPointerCapture(e.pointerId);
+    const pid = e.pointerId; held = g;
     const at = rows.map(r => r.getBoundingClientRect()), h = at[from].height, y0 = e.clientY;
     let to = from;
     box.classList.add("sorting"); me.classList.add("dragging");
     const move = ev => {
+      if (ev.pointerId !== pid) return;
       const dy = Math.max(at[0].top - at[from].top, Math.min(at[rows.length - 1].top - at[from].top, ev.clientY - y0)), mid = at[from].top + h / 2 + dy;
       me.style.transform = `translateY(${dy}px)`;
       const t = at.findIndex(r => mid < r.bottom); to = t < 0 ? rows.length - 1 : t;
       rows.forEach((r, i) => { if (r !== me) r.style.transform = i > from && i <= to ? `translateY(${-h}px)` : i < from && i >= to ? `translateY(${h}px)` : ""; });
     };
     let done = false;
-    const end = () => {
-      if (done) return; done = true;
+    const end = ev => {
+      if (done || ev.pointerId !== pid) return; done = true; held = null;
       for (const t of ["pointermove", "pointerup", "pointercancel", "lostpointercapture"]) g.removeEventListener(t, t === "pointermove" ? move : end);
       rows.forEach(r => { r.style.transform = ""; }); box.classList.remove("sorting"); me.classList.remove("dragging");
       if (to !== from) moveSupp(me.dataset.sid, rows[to].dataset.sid, to > from);
